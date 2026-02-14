@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TravelDive – Ihre Reise entdecken</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/tour.css">
+</head>
+<body>
+
+<div id="splash">
+  <div class="brand">TravelDive</div>
+  <div class="sub">Ihre Reise erleben, bevor sie beginnt</div>
+  <div class="loader"><span></span></div>
+</div>
+
+<nav class="topbar" id="topbar">
+  <div class="logo">Travel<span>Dive</span></div>
+  <div class="agent" id="agentInfo"></div>
+</nav>
+
+<div class="progress-wrap" id="progressBar"></div>
+
+<!-- HERO -->
+<section class="hero" id="hero" data-track="Willkommen">
+  <div class="hero-video-wrap" id="heroVideoWrap">
+    <div class="hero-video-fallback"></div>
+  </div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-tag">✦ Persönlich für Sie zusammengestellt</div>
+    <h1 id="heroTitle">Ihr Traumurlaub wartet</h1>
+    <p id="heroSubtitle"></p>
+    <div class="hero-meta" id="heroMeta"></div>
+    <div class="personalized-for" id="heroPref" style="display:none;">
+      <div class="pf-label">Zugeschnitten auf:</div>
+      <div class="pf-tags" id="heroPrefTags"></div>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4v12M5 11l5 5 5-5"/></svg>
+    Tour starten
+  </div>
+</section>
+
+<!-- TRANSFER -->
+<section class="transfer-section" id="transfer" data-track="Anreise">
+  <div class="inner">
+    <div class="section-label">Ihre Anreise</div>
+    <div class="section-title">Vom Flughafen zum Hotel</div>
+    <p class="transfer-intro" id="transferIntro"></p>
+    <div class="transfer-route" id="transferRoute"></div>
+    <div class="transfer-options" id="transferOptions"></div>
+    <div class="transfer-selected-msg" id="transferMsg">
+      ✅ <strong id="transferChoice"></strong> ausgewählt – wird bei der Buchung berücksichtigt.
+    </div>
+    <p class="transfer-note" id="transferNote"></p>
+  </div>
+</section>
+
+<!-- HOTEL SELECTOR -->
+<section class="hotel-selector" id="selector" data-track="Hotels vergleichen">
+  <div class="inner">
+    <div class="section-label" id="selectorLabel">Empfehlungen</div>
+    <div class="section-title" id="selectorTitle">Hotels, die zu Ihnen passen</div>
+    <p class="section-text" style="color:rgba(255,255,255,.6);">Klicken Sie auf ein Hotel, um es im Detail zu erkunden.</p>
+    <div class="hotel-cards-row" id="hotelCards"></div>
+  </div>
+</section>
+
+<!-- HOTEL DETAIL -->
+<section class="hotel-section" id="hotel" data-track="Hotel Details">
+  <div class="inner">
+    <div class="section-label">Im Detail</div>
+    <div class="section-title" id="hotelDetailName"></div>
+    <div id="hotelVideoWrap"></div>
+    <div class="hotel-photos" id="hotelPhotos"></div>
+    <div class="detail-tabs" id="detailTabs">
+      <button class="detail-tab active" onclick="switchDetailTab('overview',this)">Überblick</button>
+      <button class="detail-tab" onclick="switchDetailTab('facilities',this)">Pools & Restaurants</button>
+      <button class="detail-tab" onclick="switchDetailTab('room',this)">Ihr Zimmer</button>
+    </div>
+    <div class="detail-panel active" id="panel-overview"></div>
+    <div class="detail-panel" id="panel-facilities"></div>
+    <div class="detail-panel" id="panel-room"></div>
+  </div>
+</section>
+
+<!-- WEATHER -->
+<section class="weather-section" id="weather" data-track="Klima">
+  <div class="section-label" id="weatherLabel">Klima</div>
+  <div class="section-title" id="weatherTitle">Wetter vor Ort</div>
+  <div class="weather-grid" id="weatherGrid"></div>
+  <p class="weather-sub" id="weatherSub"></p>
+</section>
+
+<!-- EXPLORE -->
+<section id="explore" data-track="Umgebung">
+  <div class="inner">
+    <div class="section-label">Die Umgebung</div>
+    <div class="section-title">Was Sie rund ums Hotel erwartet</div>
+    <div class="explore-grid" id="poiGrid"></div>
+  </div>
+</section>
+
+<!-- MAP -->
+<section class="map-section" id="mapSection">
+  <div class="inner"><div class="section-label">Lage</div><div class="section-title">Alles auf einen Blick</div></div>
+  <div class="map-wrap" id="mapWrap"></div>
+</section>
+
+<!-- DAY -->
+<section class="day-section" id="day" data-track="Tagesplan">
+  <div class="section-label">Zugeschnitten auf Ihre Interessen</div>
+  <div class="section-title">Ein Tag in Ihrem Urlaub</div>
+  <div class="day-personalization" id="dayPref" style="display:none;"></div>
+  <div class="timeline" id="timeline"></div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section" id="cta" data-track="Anfrage">
+  <div class="section-label" style="color:var(--sunset-light)">Bereit?</div>
+  <div class="section-title">Machen Sie diesen Traum zur Realität</div>
+  <div class="cta-price" id="ctaPrice"></div>
+  <div class="cta-price-sub" id="ctaPriceSub"></div>
+  <div class="cta-selections" id="ctaSelections"></div>
+  <button class="cta-btn" id="ctaBtn">Jetzt anfragen</button>
+  <div class="cta-note">Unverbindlich · Kostenlose Beratung · Bestpreisgarantie</div>
+</section>
+
+<footer>
+  Erstellt mit <a href="/">TravelDive</a> · KI-gestützte Reiseerlebnisse<br>
+  <span id="footerMeta" style="opacity:.5;margin-top:.3rem;display:inline-block;"></span>
+</footer>
+
+<!-- ERROR PAGE (hidden by default) -->
+<div class="error-page" id="errorPage" style="display:none;">
+  <h1>Tour nicht gefunden</h1>
+  <p>Dieser Link ist leider nicht gültig oder die Tour wurde entfernt. Bitte kontaktieren Sie Ihr Reisebüro.</p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/api.js"></script>
+<script src="/js/tracking.js"></script>
+<script src="/js/tour.js"></script>
+</body>
+</html>

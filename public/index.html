@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TravelDive · Berater-Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/dashboard.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-brand">Travel<span>Dive</span></div>
+  <nav class="sidebar-nav">
+    <div class="sidebar-item active" onclick="showView('overview')" data-view="overview">📊 Übersicht</div>
+    <div class="sidebar-item" onclick="showView('editor')" data-view="editor">✏️ Tour bearbeiten</div>
+    <div class="sidebar-item" onclick="showView('analytics')" data-view="analytics">📈 Analytics</div>
+  </nav>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar">SM</div>
+    <div><div class="sidebar-uname">Sarah Meier</div><div class="sidebar-urole">Sonnenklar Reisebüro</div></div>
+  </div>
+</aside>
+
+<div class="main">
+
+  <!-- ═══ OVERVIEW ═══ -->
+  <div class="view-panel active" id="view-overview">
+    <div class="header">
+      <div class="header-title">Dashboard</div>
+      <div class="header-actions">
+        <button class="btn btn-primary" onclick="newTour()">+ Neue Tour</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="stats-row" id="statsRow">
+        <div class="stat-card"><div class="stat-label">Aktive Tours</div><div class="stat-value" id="statTours">–</div></div>
+        <div class="stat-card"><div class="stat-label">Aufrufe (7 Tage)</div><div class="stat-value" id="statViews">–</div></div>
+        <div class="stat-card"><div class="stat-label">Anfragen</div><div class="stat-value" id="statInquiries">–</div></div>
+        <div class="stat-card"><div class="stat-label">Ø Conversion</div><div class="stat-value" id="statConversion">–</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span> Ihre Tours</div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="tour-table">
+            <thead><tr>
+              <th>Kunde</th><th>Reiseziel</th><th>Zeitraum</th><th>Hotels</th><th>Status</th><th>Aufrufe</th><th></th>
+            </tr></thead>
+            <tbody id="tourTableBody">
+              <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--text-muted);">Lade Tours...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ EDITOR ═══ -->
+  <div class="view-panel" id="view-editor">
+    <div class="header">
+      <div style="display:flex;align-items:center;gap:.8rem;">
+        <div class="header-title" id="editorTitle">Neue Tour</div>
+        <span class="badge badge-draft" id="editorBadge"><span class="badge-dot"></span> Entwurf</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost" onclick="showView('overview')">← Zurück</button>
+        <button class="btn" onclick="openPreview()" id="btnPreview" style="display:none;">👁 Vorschau</button>
+        <div class="share-box" id="shareBox" style="display:none;">
+          <input readonly id="shareLink">
+          <button class="btn btn-sm" onclick="copyLink()">Kopieren</button>
+        </div>
+        <button class="btn" onclick="saveTour()">💾 Speichern</button>
+        <button class="btn btn-sunset" onclick="publishTour()" id="btnPublish">🚀 Veröffentlichen</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- BASICS -->
+      <div class="card">
+        <div class="card-header"><div class="card-title"><span class="icon">👤</span> Kunde & Reise</div></div>
+        <div class="card-body">
+          <div class="form-row three">
+            <div class="form-group"><label class="form-label">Kunde</label><input class="form-input" id="fCustomer" placeholder="Vorname Nachname"></div>
+            <div class="form-group"><label class="form-label">E-Mail</label><input class="form-input" id="fEmail" type="email" placeholder="kunde@email.de"></div>
+            <div class="form-group"><label class="form-label">Reisezeitraum</label><div style="display:flex;gap:.4rem;"><input class="form-input" id="fDateFrom" type="date"><input class="form-input" id="fDateTo" type="date"></div></div>
+          </div>
+          <div class="form-row three">
+            <div class="form-group"><label class="form-label">Reiseziel</label><input class="form-input" id="fDestination" placeholder="z.B. Kreta, Elounda"></div>
+            <div class="form-group"><label class="form-label">Abflughafen</label>
+              <select class="form-select" id="fAirport"><option value="">– wählen –</option><option>München (MUC)</option><option>Frankfurt (FRA)</option><option>Düsseldorf (DUS)</option><option>Hamburg (HAM)</option><option>Berlin (BER)</option><option>Stuttgart (STR)</option><option>Köln (CGN)</option><option>Wien (VIE)</option><option>Zürich (ZRH)</option></select>
+            </div>
+            <div class="form-group"><label class="form-label">Verpflegung</label>
+              <select class="form-select" id="fMealPlan"><option>All-Inclusive</option><option>Halbpension</option><option>Frühstück</option><option>Nur Übernachtung</option></select>
+            </div>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Kundenvorlieben</label>
+            <div class="form-hint" style="margin-bottom:.3rem;">Beeinflussen KI-generierte Inhalte (Tagesplan, Empfehlungen)</div>
+            <div class="pref-tags" id="prefTags"></div>
+          </div>
+          <div class="form-group full" style="margin-top:.8rem;">
+            <label class="form-label">Persönliche Notiz an den Kunden</label>
+            <textarea class="form-textarea" id="fNote" rows="2" placeholder="z.B. 'Frau Schmidt, ich habe Hotels mit Kinderpool für Sie rausgesucht…'"></textarea>
+          </div>
+          <div class="form-group full" style="margin-top:.8rem;">
+            <label class="form-label">Hero YouTube Video URL (optional)</label>
+            <input class="form-input" id="fHeroVideo" placeholder="https://www.youtube.com/watch?v=...">
+          </div>
+        </div>
+      </div>
+
+      <!-- HOTELS -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🏨</span> Hotels <span style="font-weight:400;color:var(--text-muted);font-size:.76rem;" id="hotelCount"></span></div>
+          <button class="btn btn-sm btn-primary" onclick="addHotel()">+ Hotel hinzufügen</button>
+        </div>
+        <div class="card-body" id="hotelList">
+          <div class="info-note">💡 Fügen Sie Hotels hinzu und klicken Sie "KI generieren" um automatisch Beschreibungen, Restaurants, Pools und Zimmerinfos zu erstellen.</div>
+        </div>
+      </div>
+
+      <!-- POIs -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📍</span> Umgebung & Sehenswürdigkeiten</div>
+          <div style="display:flex;gap:.4rem;">
+            <button class="btn btn-sm" onclick="generatePOIs()">🔄 KI generieren</button>
+            <button class="btn btn-sm btn-primary" onclick="addItem('poi')">+ Eigenen Tipp</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="editable-list" id="poiList"></div>
+          <div class="generating" id="poiGenerating"><div class="gen-spinner"></div>KI generiert Vorschläge…</div>
+          <div class="add-item-row" onclick="addItem('poi')" style="margin-top:.5rem;">+ Eigenen Ort hinzufügen</div>
+        </div>
+      </div>
+
+      <!-- DAY PLAN -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📅</span> Tagesplan</div>
+          <div style="display:flex;gap:.4rem;">
+            <button class="btn btn-sm" onclick="generateDayPlan()">🔄 KI generieren</button>
+            <button class="btn btn-sm btn-primary" onclick="addItem('day')">+ Eintrag</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="editable-list" id="dayList"></div>
+          <div class="generating" id="dayGenerating"><div class="gen-spinner"></div>KI erstellt Tagesplan…</div>
+          <div class="add-item-row" onclick="addItem('day')" style="margin-top:.5rem;">+ Eintrag hinzufügen</div>
+        </div>
+      </div>
+
+      <!-- TRANSFERS -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🚐</span> Transfer-Optionen</div>
+          <div style="display:flex;gap:.4rem;">
+            <button class="btn btn-sm" onclick="generateTransfers()">🔄 KI generieren</button>
+            <button class="btn btn-sm btn-primary" onclick="addItem('transfer')">+ Option</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="editable-list" id="transferList"></div>
+          <div class="generating" id="transferGenerating"><div class="gen-spinner"></div>KI generiert Transfer-Optionen…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ANALYTICS ═══ -->
+  <div class="view-panel" id="view-analytics">
+    <div class="header">
+      <div class="header-title">Analytics</div>
+      <div class="header-actions">
+        <select class="form-select" id="analyticsTourSelect" style="width:250px;font-size:.82rem;" onchange="loadAnalytics(this.value)">
+          <option value="">Tour auswählen…</option>
+        </select>
+      </div>
+    </div>
+    <div class="content">
+      <div id="analyticsContent">
+        <div style="text-align:center;padding:3rem;color:var(--text-muted);">Wählen Sie eine Tour aus, um die Analytics zu sehen.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3 id="modalTitle">Bearbeiten</h3>
+    <div id="modalBody"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Abbrechen</button>
+      <button class="btn btn-primary" id="modalSave" onclick="saveModalItem()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/js/api.js"></script>
+<script src="/js/dashboard.js"></script>
+</body>
+</html>

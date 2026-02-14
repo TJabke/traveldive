@@ -1,0 +1,236 @@
+:root {
+  --sand:#F5EDE3;--ocean:#1B6B8A;--ocean-deep:#0E4358;--sunset:#E8835D;
+  --sunset-light:#F4A77A;--gold:#C8A96E;--white:#FFFFFF;--dark:#1A1A1A;
+  --text:#3A3A3A;--text-light:#6B6B6B;--glass:rgba(255,255,255,0.12);
+  --glass-border:rgba(255,255,255,0.2);--green:#34A853;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;color:var(--dark);background:var(--sand);overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+a{color:inherit;text-decoration:none;}
+
+@keyframes load{to{width:100%}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes checkPop{0%{transform:scale(0)}50%{transform:scale(1.2)}100%{transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+
+/* ── Loading skeleton ── */
+.skeleton{background:linear-gradient(90deg,#eee 25%,#f5f5f5 50%,#eee 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px;}
+.skeleton-text{height:1em;margin-bottom:.5em;border-radius:4px;}
+.skeleton-img{width:100%;aspect-ratio:16/9;border-radius:12px;}
+
+/* SPLASH */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--ocean-deep);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s,visibility .8s;}
+#splash.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+#splash .brand{font-family:'Playfair Display',serif;font-size:2rem;color:var(--white);letter-spacing:.15em;text-transform:uppercase;opacity:0;animation:fadeUp .8s ease .2s forwards;}
+#splash .sub{font-size:.85rem;color:var(--sunset-light);letter-spacing:.3em;text-transform:uppercase;margin-top:.5rem;opacity:0;animation:fadeUp .8s ease .5s forwards;}
+#splash .loader{width:120px;height:2px;background:rgba(255,255,255,.15);margin-top:2rem;border-radius:2px;overflow:hidden;opacity:0;animation:fadeUp .8s ease .7s forwards;}
+#splash .loader span{display:block;height:100%;width:0;background:var(--sunset);border-radius:2px;animation:load 2s ease .8s forwards;}
+
+/* TOPBAR */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:.8rem 2rem;background:rgba(245,237,227,.92);backdrop-filter:blur(20px);border-bottom:1px solid rgba(0,0,0,.06);transition:transform .3s;}
+.topbar.hide{transform:translateY(-100%);}
+.topbar .logo{font-family:'Playfair Display',serif;font-size:1.1rem;font-weight:700;color:var(--ocean-deep);letter-spacing:.08em;}
+.topbar .logo span{color:var(--sunset);}
+.topbar .agent{font-size:.75rem;color:var(--text-light);display:flex;align-items:center;gap:.5rem;}
+.topbar .agent-avatar{width:28px;height:28px;border-radius:50%;background:var(--ocean);color:white;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:600;border:2px solid var(--gold);}
+
+/* PROGRESS */
+.progress-wrap{position:fixed;top:52px;left:0;right:0;z-index:99;display:flex;align-items:center;padding:0 2rem;height:36px;background:rgba(245,237,227,.75);backdrop-filter:blur(12px);}
+.progress-step{flex:1;display:flex;align-items:center;font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-light);cursor:pointer;transition:color .3s;}
+.progress-step.active{color:var(--ocean);font-weight:600;}
+.progress-step.done{color:var(--sunset);}
+.progress-step::after{content:'';flex:1;height:1px;background:rgba(0,0,0,.1);margin:0 .6rem;}
+.progress-step:last-child::after{display:none;}
+.step-dot{width:7px;height:7px;border-radius:50%;background:rgba(0,0,0,.12);margin-right:.4rem;transition:all .3s;flex-shrink:0;}
+.progress-step.active .step-dot{background:var(--ocean);box-shadow:0 0 0 3px rgba(27,107,138,.2);}
+.progress-step.done .step-dot{background:var(--sunset);}
+
+/* SECTIONS */
+section{padding:6rem 2rem;}
+.section-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.25em;color:var(--sunset);margin-bottom:.75rem;}
+.section-title{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,3.5vw,2.8rem);color:var(--ocean-deep);line-height:1.2;margin-bottom:1rem;}
+.section-text{font-size:1rem;line-height:1.8;color:var(--text);max-width:640px;}
+.inner{max-width:1100px;margin:0 auto;}
+
+/* HERO */
+.hero{height:100vh;position:relative;display:flex;align-items:flex-end;overflow:hidden;}
+.hero-video-wrap{position:absolute;inset:0;z-index:0;overflow:hidden;}
+.hero-video-wrap iframe{position:absolute;top:50%;left:50%;width:120vw;height:120vh;min-width:120vw;min-height:120vh;transform:translate(-50%,-50%);pointer-events:none;}
+.hero-video-fallback{position:absolute;inset:0;background:linear-gradient(135deg,#0E4358,#1B6B8A 40%,#2E8BA8 70%,#E8835D);z-index:0;}
+.hero-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(14,67,88,.15) 0%,rgba(14,67,88,.35) 40%,rgba(14,67,88,.88) 100%);}
+.hero-content{position:relative;z-index:2;padding:0 4rem 5rem;max-width:750px;opacity:0;animation:slideUp 1s ease .3s forwards;}
+.hero-tag{display:inline-block;font-size:.7rem;letter-spacing:.25em;text-transform:uppercase;color:var(--sunset-light);margin-bottom:1rem;background:rgba(232,131,93,.15);padding:.4rem 1rem;border-radius:20px;backdrop-filter:blur(8px);}
+.hero h1{font-family:'Playfair Display',serif;font-size:clamp(2.5rem,5vw,4rem);color:var(--white);line-height:1.15;margin-bottom:1rem;}
+.hero h1 em{font-style:italic;color:var(--sunset-light);}
+.hero p{font-size:1.05rem;color:rgba(255,255,255,.8);line-height:1.7;max-width:520px;}
+.hero-meta{display:flex;gap:2rem;margin-top:2rem;flex-wrap:wrap;}
+.hero-meta-item{display:flex;align-items:center;gap:.5rem;color:rgba(255,255,255,.7);font-size:.85rem;}
+.personalized-for{display:flex;align-items:center;gap:.6rem;margin-top:1.5rem;padding:.6rem 1rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:10px;backdrop-filter:blur(8px);max-width:fit-content;}
+.pf-tags{display:flex;gap:.4rem;flex-wrap:wrap;}
+.pf-tag{padding:.2rem .6rem;border-radius:12px;font-size:.68rem;font-weight:500;background:rgba(232,131,93,.2);color:var(--sunset-light);border:1px solid rgba(232,131,93,.3);}
+.pf-label{font-size:.7rem;color:rgba(255,255,255,.5);white-space:nowrap;}
+.scroll-hint{position:absolute;bottom:2rem;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.5);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;display:flex;flex-direction:column;align-items:center;gap:.5rem;animation:pulse 2s ease infinite;z-index:3;}
+.scroll-hint svg{animation:float 2s ease infinite;}
+
+/* TRANSFER */
+.transfer-section{background:var(--white);padding:5rem 2rem;}
+.transfer-intro{font-size:.95rem;color:var(--text);line-height:1.7;max-width:600px;margin-bottom:2rem;}
+.transfer-route{display:flex;align-items:center;gap:.6rem;margin-bottom:2rem;padding:1rem 1.2rem;background:var(--sand);border-radius:12px;flex-wrap:wrap;}
+.route-point{display:flex;align-items:center;gap:.4rem;font-size:.85rem;font-weight:500;color:var(--ocean-deep);}
+.route-arrow{color:var(--text-light);font-size:.8rem;}
+.transfer-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;max-width:1100px;}
+.transfer-card{border:2px solid rgba(0,0,0,.06);border-radius:16px;padding:1.5rem;background:var(--white);cursor:pointer;transition:all .3s;position:relative;}
+.transfer-card:hover{border-color:rgba(27,107,138,.25);box-shadow:0 4px 20px rgba(0,0,0,.06);}
+.transfer-card.selected{border-color:var(--ocean);background:rgba(27,107,138,.03);}
+.transfer-card.selected::after{content:'✓';position:absolute;top:.8rem;right:.8rem;width:24px;height:24px;border-radius:50%;background:var(--ocean);color:white;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;animation:checkPop .3s ease;}
+.tc-icon{font-size:1.8rem;margin-bottom:.8rem;}
+.tc-name{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--ocean-deep);margin-bottom:.3rem;}
+.tc-duration{font-size:.78rem;color:var(--text-light);margin-bottom:.6rem;}
+.tc-desc{font-size:.82rem;color:var(--text);line-height:1.6;margin-bottom:.8rem;}
+.tc-price{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--ocean-deep);font-weight:700;}
+.tc-price-note{font-size:.7rem;color:var(--text-light);font-family:'DM Sans',sans-serif;font-weight:400;}
+.tc-tags{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.6rem;}
+.tc-tag{font-size:.65rem;padding:.2rem .5rem;border-radius:8px;background:var(--sand);color:var(--text-light);}
+.transfer-selected-msg{display:none;margin-top:1.5rem;padding:1rem 1.2rem;background:rgba(52,168,83,.06);border:1px solid rgba(52,168,83,.2);border-radius:12px;font-size:.85rem;color:#1B5E20;align-items:center;gap:.5rem;}
+.transfer-selected-msg.show{display:flex;}
+.transfer-note{margin-top:1rem;font-size:.78rem;color:var(--text-light);max-width:600px;line-height:1.5;}
+
+/* HOTEL SELECTOR */
+.hotel-selector{background:var(--ocean-deep);padding:3rem 2rem 2rem;color:white;}
+.hotel-selector .section-label{color:var(--sunset-light);}
+.hotel-selector .section-title{color:white;margin-bottom:.5rem;}
+.hotel-selector .section-text{color:rgba(255,255,255,.6);}
+.hotel-cards-row{display:flex;gap:1rem;margin-top:2rem;overflow-x:auto;padding-bottom:1rem;scroll-snap-type:x mandatory;}
+.hotel-select-card{flex:0 0 300px;scroll-snap-align:start;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.1);border-radius:16px;overflow:hidden;cursor:pointer;transition:all .3s;position:relative;}
+.hotel-select-card:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);}
+.hotel-select-card.active{border-color:var(--sunset);background:rgba(232,131,93,.08);}
+.hotel-select-card.active::after{content:'Wird angezeigt';position:absolute;top:.75rem;right:.75rem;background:var(--sunset);color:white;font-size:.6rem;font-weight:600;padding:.25rem .6rem;border-radius:10px;text-transform:uppercase;}
+.hsc-img{height:140px;background-size:cover;background-position:center;}
+.hsc-info{padding:1rem 1.2rem;}
+.hsc-name{font-family:'Playfair Display',serif;font-size:1rem;color:white;margin-bottom:.3rem;}
+.hsc-meta{font-size:.75rem;color:rgba(255,255,255,.5);display:flex;gap:.8rem;flex-wrap:wrap;}
+.hsc-price{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--sunset-light);margin-top:.5rem;}
+.hsc-price span{font-size:.72rem;color:rgba(255,255,255,.4);font-family:'DM Sans',sans-serif;}
+
+/* HOTEL DETAIL */
+.hotel-section{background:var(--white);}
+.hotel-video-showcase{margin-top:2.5rem;border-radius:16px;overflow:hidden;aspect-ratio:16/9;max-height:480px;background:var(--dark);box-shadow:0 8px 40px rgba(0,0,0,.12);}
+.hotel-video-showcase iframe{width:100%;height:100%;border:none;}
+.hotel-photos{display:grid;grid-template-columns:repeat(4,1fr);gap:.5rem;margin-top:1.5rem;border-radius:12px;overflow:hidden;}
+.hotel-photo{aspect-ratio:4/3;background-size:cover;background-position:center;position:relative;transition:transform .4s;}
+.hotel-photo:hover{transform:scale(1.03);z-index:1;}
+.hotel-photo-label{position:absolute;bottom:0;left:0;right:0;padding:.5rem .75rem;background:linear-gradient(transparent,rgba(0,0,0,.6));color:white;font-size:.7rem;}
+
+.detail-tabs{display:flex;gap:.5rem;margin-top:3rem;margin-bottom:2rem;border-bottom:1px solid rgba(0,0,0,.08);}
+.detail-tab{padding:.7rem 1.2rem;font-size:.82rem;font-weight:500;color:var(--text-light);cursor:pointer;border-bottom:2px solid transparent;transition:all .3s;background:none;border-top:none;border-left:none;border-right:none;font-family:'DM Sans',sans-serif;}
+.detail-tab:hover{color:var(--ocean);}
+.detail-tab.active{color:var(--ocean);border-bottom-color:var(--ocean);}
+.detail-panel{display:none;}
+.detail-panel.active{display:block;}
+
+.hotel-overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start;}
+.hotel-desc{font-size:.95rem;line-height:1.85;color:var(--text);}
+.hotel-stars{color:var(--gold);font-size:.9rem;margin-bottom:1rem;}
+.reviews-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--ocean-deep);margin-bottom:1rem;}
+.review-card{background:var(--sand);border-radius:12px;padding:1.1rem 1.4rem;margin-bottom:.6rem;border-left:3px solid var(--gold);}
+.review-card p{font-size:.85rem;line-height:1.6;color:var(--text);font-style:italic;}
+.review-card .reviewer{font-size:.72rem;color:var(--text-light);margin-top:.4rem;font-style:normal;}
+
+.facility-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.2rem;}
+.facility-card{background:var(--sand);border-radius:14px;padding:1.5rem;border:1px solid rgba(0,0,0,.04);}
+.fc-icon{font-size:1.4rem;margin-bottom:.6rem;}
+.fc-name{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--ocean-deep);margin-bottom:.4rem;}
+.fc-desc{font-size:.84rem;color:var(--text);line-height:1.65;}
+.fc-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:.6rem;}
+.fc-tag{font-size:.7rem;padding:.2rem .6rem;border-radius:10px;background:rgba(27,107,138,.08);color:var(--ocean);}
+
+.room-features{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin-top:1rem;}
+.room-feature{display:flex;align-items:flex-start;gap:.6rem;padding:1rem;background:var(--sand);border-radius:12px;}
+.rf-icon{font-size:1.1rem;flex-shrink:0;margin-top:.1rem;}
+.rf-text .rf-title{font-size:.85rem;font-weight:600;color:var(--ocean-deep);margin-bottom:.15rem;}
+.rf-text .rf-detail{font-size:.78rem;color:var(--text-light);line-height:1.5;}
+
+/* WEATHER */
+.weather-section{background:linear-gradient(135deg,#1a7a9b,var(--ocean));color:var(--white);text-align:center;padding:5rem 2rem;}
+.weather-section .section-label{color:var(--sunset-light);}
+.weather-section .section-title{color:var(--white);}
+.weather-grid{display:flex;justify-content:center;gap:1.2rem;margin-top:3rem;flex-wrap:wrap;}
+.weather-card{background:var(--glass);border:1px solid var(--glass-border);backdrop-filter:blur(12px);border-radius:16px;padding:1.5rem 1.8rem;min-width:120px;text-align:center;transition:transform .3s;}
+.weather-card:hover{transform:translateY(-4px);background:rgba(255,255,255,.18);}
+.weather-card .temp{font-family:'Playfair Display',serif;font-size:2rem;font-weight:700;}
+.weather-card .wlabel{font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;opacity:.7;margin-top:.3rem;}
+.weather-card .wicon{font-size:1.6rem;margin-bottom:.5rem;}
+.weather-sub{font-size:.88rem;opacity:.7;margin-top:2rem;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.6;}
+
+/* EXPLORE */
+.explore-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-top:3rem;}
+.poi-card{border-radius:16px;overflow:hidden;background:var(--white);box-shadow:0 4px 20px rgba(0,0,0,.06);transition:transform .3s,box-shadow .3s;}
+.poi-card:hover{transform:translateY(-6px);box-shadow:0 12px 32px rgba(0,0,0,.1);}
+.poi-img{height:180px;background-size:cover;background-position:center;position:relative;}
+.poi-dist{position:absolute;bottom:.75rem;right:.75rem;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);color:white;padding:.3rem .75rem;border-radius:20px;font-size:.72rem;font-weight:500;}
+.poi-info{padding:1.2rem 1.5rem;}
+.poi-type{font-size:.65rem;text-transform:uppercase;letter-spacing:.15em;color:var(--sunset);margin-bottom:.3rem;}
+.poi-name{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--ocean-deep);margin-bottom:.4rem;}
+.poi-desc{font-size:.82rem;color:var(--text-light);line-height:1.5;}
+
+/* MAP */
+.map-section{background:var(--white);padding:4rem 2rem;}
+.map-wrap{max-width:1100px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);aspect-ratio:16/7;min-height:350px;}
+.map-wrap iframe{width:100%;height:100%;border:none;}
+
+/* DAY */
+.day-section{background:var(--sand);max-width:800px;margin:0 auto;padding:6rem 2rem;}
+.day-personalization{display:flex;align-items:center;gap:.6rem;margin-top:1rem;padding:.7rem 1.2rem;background:rgba(27,107,138,.06);border:1px solid rgba(27,107,138,.12);border-radius:12px;flex-wrap:wrap;}
+.dp-label{font-size:.75rem;color:var(--ocean);font-weight:500;}
+.dp-tags{display:flex;gap:.4rem;flex-wrap:wrap;}
+.dp-tag{padding:.25rem .65rem;border-radius:12px;font-size:.68rem;font-weight:500;background:var(--ocean);color:white;}
+.timeline{margin-top:2.5rem;position:relative;}
+.timeline::before{content:'';position:absolute;left:24px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--sunset-light),var(--ocean),var(--gold));}
+.tl-item{display:flex;gap:2rem;margin-bottom:2.5rem;position:relative;opacity:0;transform:translateY(20px);transition:all .6s;}
+.tl-item.visible{opacity:1;transform:translateY(0);}
+.tl-dot{width:12px;height:12px;border-radius:50%;background:var(--sunset);flex-shrink:0;margin-top:.3rem;position:relative;z-index:1;box-shadow:0 0 0 4px var(--sand),0 0 0 5px rgba(232,131,93,.3);margin-left:19px;}
+.tl-time{font-size:.75rem;color:var(--sunset);font-weight:600;letter-spacing:.05em;margin-bottom:.3rem;}
+.tl-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--ocean-deep);margin-bottom:.3rem;}
+.tl-desc{font-size:.88rem;color:var(--text);line-height:1.7;}
+
+/* CTA */
+.cta-section{text-align:center;padding:6rem 2rem;background:linear-gradient(135deg,var(--ocean-deep),var(--ocean) 50%,var(--sunset));color:var(--white);}
+.cta-section .section-label{color:var(--sunset-light);}
+.cta-section .section-title{color:var(--white);}
+.cta-price{font-family:'Playfair Display',serif;font-size:3rem;font-weight:700;margin:1.5rem 0 .25rem;}
+.cta-price-sub{font-size:.85rem;opacity:.7;margin-bottom:.5rem;}
+.cta-selections{font-size:.82rem;opacity:.8;margin-bottom:2rem;min-height:1.2em;}
+.cta-btn{display:inline-block;padding:1rem 3rem;background:var(--white);color:var(--ocean-deep);font-family:'DM Sans',sans-serif;font-size:1rem;font-weight:600;border:none;border-radius:50px;cursor:pointer;transition:transform .3s,box-shadow .3s;box-shadow:0 4px 24px rgba(0,0,0,.15);}
+.cta-btn:hover{transform:translateY(-3px);box-shadow:0 8px 32px rgba(0,0,0,.2);}
+.cta-note{font-size:.78rem;opacity:.6;margin-top:1rem;}
+
+/* ERROR */
+.error-page{min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:2rem;}
+.error-page h1{font-family:'Playfair Display',serif;font-size:2rem;color:var(--ocean-deep);margin-bottom:1rem;}
+.error-page p{color:var(--text-light);font-size:1rem;max-width:400px;}
+
+footer{text-align:center;padding:2rem;font-size:.72rem;color:var(--text-light);background:var(--sand);}
+footer a{color:var(--ocean);}
+
+/* ── Spinner ── */
+.loading-spinner{display:flex;align-items:center;justify-content:center;padding:3rem;flex-direction:column;gap:1rem;color:var(--text-light);}
+.spinner{width:32px;height:32px;border:3px solid var(--sand);border-top-color:var(--ocean);border-radius:50%;animation:spin .8s linear infinite;}
+
+@media(max-width:768px){
+  .hotel-overview-grid{grid-template-columns:1fr;gap:2rem;}
+  .hotel-photos{grid-template-columns:1fr 1fr;}
+  .hero-content{padding:0 2rem 4rem;}
+  .topbar{padding:.7rem 1rem;}
+  .progress-wrap{padding:0 .8rem;}
+  .progress-step>span{display:none;}
+  section{padding:4rem 1.5rem;}
+  .hotel-select-card{flex:0 0 260px;}
+  .facility-grid{grid-template-columns:1fr;}
+  .transfer-options{grid-template-columns:1fr;}
+  .explore-grid{grid-template-columns:1fr;}
+}
