@@ -325,6 +325,7 @@ function renderHotelDetail(index) {
             <p>"${r.text}"</p>
             <div class="reviewer">— ${r.author}${r.date ? " · "+r.date : ""}</div>
             <div class="review-source">Quelle: ${resolveReviewSource(r)}</div>
+            ${r.source ? `<div class="review-source">Quelle: ${r.source}</div>` : ""}
           </div>
         `).join("")}
       </div>
@@ -564,6 +565,19 @@ function focusMapLocation(index) {
   renderMap();
   if (mapLocations[index].externalUrl) {
     window.open(mapLocations[index].externalUrl, "_blank", "noopener");
+  const query = h.place_id
+    ? `place_id:${h.place_id}`
+    : `${h.name} ${h.location || tour.destination}`;
+  const url = TravelDiveAPI.getGoogleMapsEmbedUrl(query, 14);
+  if (url) {
+    const pois = (h.pois || tour.pois || []).slice(0, 4);
+    document.getElementById("mapWrap").innerHTML = `
+      <iframe src="${url}" allowfullscreen loading="lazy"></iframe>
+      <div class="map-locations">
+        <span class="map-location active">🏨 ${escapeHTML(h.name)}</span>
+        ${pois.map(p => `<span class="map-location">📍 ${escapeHTML(p.name || "Highlight")}</span>`).join("")}
+      </div>
+    `;
   }
 }
 
