@@ -33,6 +33,9 @@ const API = {
   // Weather
   async getWeather(lat, lng, month) { return (await fetch(`/api/weather?lat=${lat}&lng=${lng}&month=${month}`)).json(); },
 
+  // Extraction
+  async extractHotelRooms(url) { return (await fetch("/api/extract/rooms", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ url }) })).json(); },
+
   // Tracking
   async trackEvent(tourId, eventType, data = {}, sessionId = null) {
     try { await fetch("/api/tracking", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ tour_id: tourId, event_type: eventType, data, session_id: sessionId }) }); } catch(e) { console.warn("Tracking failed:", e); }

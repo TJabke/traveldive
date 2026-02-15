@@ -4,6 +4,8 @@
 let tour = null;
 let selectedHotelIndex = 0;
 let selectedTransfer = null;
+let mapLocations = [];
+let selectedMapLocation = 0;
 
 const PREF_ICONS = {
   strand:"🏖",familie:"👨‍👩‍👧",kulinarik:"🍽",kultur:"🏛",wellness:"🧖",
@@ -13,21 +15,30 @@ const PREF_ICONS = {
 
 // ── INIT ──
 async function initTour() {
+  let loadGuardTimer = null;
   try {
-    await TravelDiveAPI.init();
+    loadGuardTimer = setTimeout(() => {
+      const splash = document.getElementById("splash");
+      if (splash && !splash.classList.contains("hidden")) {
+        console.error("Tour init timeout: splash guard triggered");
+        showError();
+      }
+    }, 12000);
+
+    await withTimeout(TravelDiveAPI.init(), 5000, "Konfiguration konnte nicht geladen werden.");
 
     // Get tour slug from URL
     const path = window.location.pathname;
     const slug = path.replace("/t/", "").replace("/tour.html", "").replace(/^\/+|\/+$/g, "");
-    
+
     if (!slug) {
       // Try query param fallback
       const params = new URLSearchParams(window.location.search);
       const qSlug = params.get("slug");
       if (!qSlug) return showError();
-      tour = await TravelDiveAPI.getTour(qSlug);
+      tour = await withTimeout(TravelDiveAPI.getTour(qSlug), 7000, "Tour konnte nicht geladen werden.");
     } else {
-      tour = await TravelDiveAPI.getTour(slug);
+      tour = await withTimeout(TravelDiveAPI.getTour(slug), 7000, "Tour konnte nicht geladen werden.");
     }
 
     if (!tour) return showError();
@@ -37,8 +48,8 @@ async function initTour() {
 
     // Render all sections
     renderHero();
-    renderTransfers();
     renderHotelSelector();
+    renderTransfers();
     renderHotelDetail(0);
     renderWeather();
     renderPOIs();
@@ -58,6 +69,8 @@ async function initTour() {
     console.error("Tour init error:", err);
     setTimeout(() => document.getElementById("splash").classList.add("hidden"), 1000);
     showError();
+  } finally {
+    if (loadGuardTimer) clearTimeout(loadGuardTimer);
   }
 }
 
@@ -94,8 +107,29 @@ async function renderHero() {
     `<div class="hero-meta-item">${m}</div>`
   ).join("");
 
+  const countdownEl = document.getElementById("heroCountdown");
+  const daysToTrip = getDaysUntilTrip(tour.date_from);
+  if (daysToTrip !== null && daysToTrip >= 0) {
+    countdownEl.style.display = "inline-flex";
+    countdownEl.innerHTML = `⏳ Noch <strong>${daysToTrip}</strong> Tage bis zu Ihrer Traumreise`;
+  } else {
+    countdownEl.style.display = "none";
+  }
+
+  const hotel = (tour.hotels || [])[selectedHotelIndex];
+  const story = tour.personal_note || `Stellen Sie sich vor: Morgens mit Meerblick aufwachen, tagsüber ${tour.destination} entdecken und abends entspannt den Tag ausklingen lassen.`;
+  document.getElementById("heroStory").textContent = story;
+
+  const highlights = [
+    `🏝 ${tour.destination}`,
+    `🛏 ${tour.nights} Nächte`,
+    tour.meal_plan ? `🍽 ${tour.meal_plan}` : null,
+    hotel?.name ? `🏨 ${hotel.name}` : null
+  ].filter(Boolean);
+  document.getElementById("heroHighlights").innerHTML = highlights.map(h => `<span class="hero-highlight">${h}</span>`).join("");
+
   // Preferences
-  const prefs = tour.preferences || [];
+  const prefs = getDisplayPreferences();
   if (prefs.length > 0) {
     document.getElementById("heroPref").style.display = "flex";
     document.getElementById("heroPrefTags").innerHTML = prefs.map(p => {
@@ -124,8 +158,20 @@ async function loadHeroBackground() {
   const fallback = document.querySelector(".hero-video-fallback");
   if (!fallback) return;
 
+  if (tour.hero_image_url) {
+    fallback.style.backgroundImage = `url('${tour.hero_image_url}')`;
+    fallback.style.backgroundSize = "cover";
+    fallback.style.backgroundPosition = "center";
+    return;
+  }
+
   // Try multiple search queries for best result
   const h = (tour.hotels || [])[0];
+  if (h?.photo_url) {
+    fallback.style.backgroundImage = `url('${h.photo_url}')`;
+    fallback.style.backgroundSize = "cover";
+    fallback.style.backgroundPosition = "center";
+  }
   const queries = [
     h ? `${h.name} ${h.location || ""}` : null,
     `${tour.destination} landscape panorama`,
@@ -136,7 +182,7 @@ async function loadHeroBackground() {
     try {
       const results = await TravelDiveAPI.searchPlace(query);
       if (results[0]?.photo_ref) {
-        const url = TravelDiveAPI.getPlacePhotoUrl(results[0].photo_ref, 1600);
+        const url = TravelDiveAPI.getPlacePhotoUrl(results[0].photo_ref, 2400);
         fallback.style.backgroundImage = `url('${url}')`;
         fallback.style.backgroundSize = "cover";
         fallback.style.backgroundPosition = "center";
@@ -240,6 +286,7 @@ function renderHotelSelector() {
 
 function selectHotel(index) {
   selectedHotelIndex = index;
+  selectedMapLocation = 0;
   selectedTransfer = null; // Reset transfer selection
   document.querySelectorAll(".hotel-select-card").forEach((c,i) => c.classList.toggle("active", i===index));
   
@@ -283,11 +330,12 @@ function renderHotelDetail(index) {
         <p class="hotel-desc">${h.description || ""}</p>
       </div>
       <div>
-        <div class="reviews-title">Was Gäste sagen</div>
-        ${(h.reviews || []).map(r => `
+        <div class="reviews-title">Was Gäste sagen${getTravelerTypeLabel() ? ` <span style="font-size:.7rem;color:var(--text-light);font-family:'DM Sans',sans-serif;">(${getTravelerTypeLabel()})</span>` : ""}</div>
+        ${getAudienceReviews(h.reviews || []).map(r => `
           <div class="review-card">
             <p>"${r.text}"</p>
             <div class="reviewer">— ${r.author}${r.date ? " · "+r.date : ""}</div>
+            <div class="review-source">Quelle: ${resolveReviewSource(r)}</div>
           </div>
         `).join("")}
       </div>
@@ -309,17 +357,26 @@ function renderHotelDetail(index) {
   `;
 
   // Room panel
-  const room = h.room || {};
+  const roomOptions = Array.isArray(h.room_options) ? h.room_options : [];
+  const selectedRoom = roomOptions[h.selected_room_index || 0] || h.room || {};
+  const normalizedFeatures = (selectedRoom.features || []).map(f => typeof f === "string" ? { title: f, detail: "" } : f);
   document.getElementById("panel-room").innerHTML = `
-    <div style="margin-bottom:1.5rem;">
-      <div class="hotel-stars">${room.type || "Zimmer"} · ${room.size || ""}</div>
-      <p class="hotel-desc">${room.description || ""}</p>
+    <div style="margin-bottom:1.2rem;">
+      <div class="hotel-stars">${selectedRoom.category || selectedRoom.type || "Zimmer"} ${selectedRoom.size ? `· ${selectedRoom.size}` : ""}</div>
+      <p class="hotel-desc">${selectedRoom.description || ""}</p>
     </div>
+    ${roomOptions.length > 0 ? `
+      <div class="room-category-list">
+        ${roomOptions.map((opt, idx) => `
+          <span class="room-category-chip ${idx === (h.selected_room_index || 0) ? "active" : ""}">${escapeHTML(opt.category || opt.type || "Zimmer")}</span>
+        `).join("")}
+      </div>
+    ` : ""}
     <div class="room-features">
-      ${(room.features || []).map(f => `
+      ${normalizedFeatures.map(f => `
         <div class="room-feature">
           <div class="rf-icon">${f.icon || "✦"}</div>
-          <div class="rf-text"><div class="rf-title">${f.title}</div><div class="rf-detail">${f.detail}</div></div>
+          <div class="rf-text"><div class="rf-title">${f.title || "Highlight"}</div><div class="rf-detail">${f.detail || ""}</div></div>
         </div>
       `).join("")}
     </div>
@@ -373,14 +430,14 @@ async function renderHotelPhotos(hotel) {
     const labels = ["Außenansicht", "Zimmer", "Pool", "Restaurant", "Lobby", "Strand", "Spa", "Garten"];
     const count = Math.min(photoRefs.length, 4);
     container.innerHTML = photoRefs.slice(0, count).map((ref, i) => `
-      <div class="hotel-photo" style="background-image:url('${TravelDiveAPI.getPlacePhotoUrl(ref, 600)}')">
+      <div class="hotel-photo" style="background-image:url('${TravelDiveAPI.getPlacePhotoUrl(ref, 1400)}')" onclick="openPhotoLightbox('${encodeURIComponent(TravelDiveAPI.getPlacePhotoUrl(ref, 1800))}', '${encodeURIComponent(labels[i] || "Hotelbild")}')">
         <div class="hotel-photo-label">${labels[i] || ""}</div>
       </div>
     `).join("");
   } else if (hotel.photo_url) {
     // Fallback: single stored photo
     container.innerHTML = `
-      <div class="hotel-photo" style="background-image:url('${hotel.photo_url}');grid-column:1/-1;aspect-ratio:21/9;"></div>
+      <div class="hotel-photo" style="background-image:url('${hotel.photo_url}');grid-column:1/-1;aspect-ratio:21/9;" onclick="openPhotoLightbox('${encodeURIComponent(hotel.photo_url)}', 'Hotelansicht')"></div>
     `;
   } else {
     // No photos at all - show placeholder
@@ -422,6 +479,14 @@ async function renderWeather() {
   ];
   document.getElementById("weatherGrid").innerHTML = cards.map(c => `
     <div class="weather-card"><div class="wicon">${c.icon}</div><div class="temp">${c.val}</div><div class="wlabel">${c.label}</div></div>
+  `).join("");
+
+  const moodText = getWeatherMood(weather, monthNames[month]);
+  document.getElementById("weatherMood").textContent = moodText;
+
+  const activityIdeas = getWeatherActivities(weather);
+  document.getElementById("weatherActivities").innerHTML = activityIdeas.map(idea => `
+    <div class="weather-activity">${idea}</div>
   `).join("");
   
   document.getElementById("weatherSub").textContent = `${monthNames[month]} ist eine wunderbare Reisezeit für ${tour.destination}.`;
@@ -474,11 +539,49 @@ function renderMap() {
   const h = (tour.hotels || [])[selectedHotelIndex];
   if (!h) return;
 
-  const query = `${h.name} ${h.location || tour.destination}`;
-  const url = TravelDiveAPI.getGoogleMapsEmbedUrl(query, 14);
+  const pois = (h.pois || tour.pois || []).slice(0, 6);
+  mapLocations = [
+    {
+      label: `🏨 ${h.name}`,
+      query: buildMapQuery(h, `${h.name} ${h.location || tour.destination}`),
+      externalUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.name + " " + (h.location || tour.destination || ""))}`
+    },
+    ...pois.map((p) => ({
+      label: `📍 ${p.name || "Highlight"}`,
+      query: buildMapQuery(p, `${p.name || "Highlight"} ${tour.destination}`),
+      externalUrl: p.lat && p.lng
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${p.lat},${p.lng}`)}`
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((p.name || "Highlight") + " " + tour.destination)}`
+    }))
+  ];
+  selectedMapLocation = Math.min(selectedMapLocation, mapLocations.length - 1);
+  const focused = mapLocations[selectedMapLocation] || mapLocations[0];
+  const url = TravelDiveAPI.getGoogleMapsEmbedUrl(focused.query, 14);
   if (url) {
-    document.getElementById("mapWrap").innerHTML = `<iframe src="${url}" allowfullscreen loading="lazy"></iframe>`;
+    document.getElementById("mapWrap").innerHTML = `
+      <iframe src="${url}" allowfullscreen loading="lazy"></iframe>
+      <div class="map-locations">
+        ${mapLocations.map((location, index) => `
+          <button class="map-location ${index === selectedMapLocation ? "active" : ""}" onclick="focusMapLocation(${index})">${escapeHTML(location.label)}</button>
+        `).join("")}
+      </div>
+    `;
   }
+}
+
+function focusMapLocation(index) {
+  if (!mapLocations[index]) return;
+  selectedMapLocation = index;
+  renderMap();
+  if (mapLocations[index].externalUrl) {
+    window.open(mapLocations[index].externalUrl, "_blank", "noopener");
+  }
+}
+
+function buildMapQuery(item, fallbackQuery) {
+  if (item.place_id) return `place_id:${item.place_id}`;
+  if (item.lat && item.lng) return `${item.lat},${item.lng}`;
+  return fallbackQuery;
 }
 
 // ── DAY PLAN ──
@@ -492,7 +595,7 @@ function renderDayPlan() {
   document.getElementById("day").style.display = "";
 
   // Preference tags
-  const prefs = tour.preferences || [];
+  const prefs = getDisplayPreferences();
   if (prefs.length > 0) {
     const dayPref = document.getElementById("dayPref");
     dayPref.style.display = "flex";
@@ -573,8 +676,8 @@ function updateCTASelections() {
 function renderProgress() {
   const sections = [
     { id:"hero", label:"Willkommen" },
-    { id:"transfer", label:"Anreise" },
     { id:"selector", label:"Hotels" },
+    { id:"transfer", label:"Anreise" },
     { id:"hotel", label:"Details" },
     { id:"weather", label:"Klima" },
     { id:"explore", label:"Umgebung" },
@@ -654,6 +757,95 @@ function extractYouTubeId(url) {
   return m ? m[1] : null;
 }
 
+function getDaysUntilTrip(dateFrom) {
+  if (!dateFrom) return null;
+  const tripDate = new Date(dateFrom);
+  if (Number.isNaN(tripDate.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  tripDate.setHours(0, 0, 0, 0);
+  return Math.ceil((tripDate - today) / (1000 * 60 * 60 * 24));
+}
+
+function resolveReviewSource(review) {
+  return review.source || review.platform || review.provider || "Verifizierte Gästemeinung";
+}
+
+function openPhotoLightbox(encodedUrl, encodedCaption = "") {
+  const lightbox = document.getElementById("photoLightbox");
+  const image = document.getElementById("photoLightboxImage");
+  const captionEl = document.getElementById("photoLightboxCaption");
+  if (!lightbox || !image || !captionEl) return;
+  image.src = decodeURIComponent(encodedUrl || "");
+  captionEl.textContent = decodeURIComponent(encodedCaption || "");
+  lightbox.style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+function closePhotoLightbox(event) {
+  if (event) event.stopPropagation();
+  const lightbox = document.getElementById("photoLightbox");
+  const image = document.getElementById("photoLightboxImage");
+  if (!lightbox || !image) return;
+  lightbox.style.display = "none";
+  image.src = "";
+  document.body.style.overflow = "";
+}
+
+
+function getTravelerType() {
+  if (tour?.traveler_type) return tour.traveler_type;
+  const prefs = Array.isArray(tour?.preferences) ? tour.preferences : [];
+  const meta = prefs.find(p => String(p).startsWith("__traveler_type:"));
+  return meta ? meta.split(":")[1] : "";
+}
+
+function getTravelerTypeLabel() {
+  const t = getTravelerType();
+  const labels = { family: "für Familien", solo: "für Alleinreisende", couple: "für Pärchen" };
+  return labels[t] || "";
+}
+
+function getDisplayPreferences() {
+  return (tour?.preferences || []).filter(p => !String(p).startsWith("__traveler_type:"));
+}
+
+function getAudienceReviews(reviews) {
+  const list = Array.isArray(reviews) ? reviews : [];
+  const t = getTravelerType();
+  if (!t || list.length === 0) return list;
+
+  const keywords = {
+    family: ["famil", "kinder", "child", "kids"],
+    solo: ["solo", "allein", "single"],
+    couple: ["paar", "pärchen", "partner", "honeymoon", "romantik"]
+  };
+
+  const scored = list.map(r => {
+    const hay = [r.traveler_type, r.audience, r.author, r.text, Array.isArray(r.tags) ? r.tags.join(" ") : r.tags]
+      .filter(Boolean).join(" ").toLowerCase();
+    const explicit = [r.traveler_type, r.audience].filter(Boolean).join(" ").toLowerCase();
+    const score = (explicit.includes(t) ? 3 : 0) + (keywords[t] || []).reduce((acc, kw) => acc + (hay.includes(kw) ? 1 : 0), 0);
+    return { ...r, _score: score };
+  });
+
+  scored.sort((a, b) => b._score - a._score);
+  const matched = scored.filter(r => r._score > 0);
+  const finalList = matched.length >= 2 ? matched : scored;
+  return finalList.slice(0, 3).map(({ _score, ...rest }) => rest);
+}
+
+
+function withTimeout(promise, timeoutMs, message = "Zeitüberschreitung") {
+  let timer = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 function formatDateRange(from, to) {
   if (!from) return "";
   const f = new Date(from);
@@ -663,6 +855,43 @@ function formatDateRange(from, to) {
     return `${f.getDate()}.–${t.toLocaleDateString("de-DE", opts)}`;
   }
   return t ? `${f.toLocaleDateString("de-DE",{day:"numeric",month:"long"})} – ${t.toLocaleDateString("de-DE",opts)}` : f.toLocaleDateString("de-DE",opts);
+}
+
+function getWeatherMood(weather, monthName) {
+  const sunHours = parseFloat(String(weather.sun_hours || "").replace("h", "").replace(",", "."));
+  const rainDays = parseFloat(String(weather.rain_days || "").replace(",", "."));
+
+  if (!Number.isNaN(sunHours) && sunHours >= 8) {
+    return `☀️ ${monthName} bringt viel Sonne – perfekt für lange Strandtage und Dinner bei Sonnenuntergang.`;
+  }
+  if (!Number.isNaN(rainDays) && rainDays >= 9) {
+    return `🌴 ${monthName} wirkt tropisch und lebendig – ideal für eine Mischung aus Entspannung, Spa und Ausflügen.`;
+  }
+  return `🌺 ${monthName} bietet angenehme Bedingungen für eine abwechslungsreiche Urlaubswoche.`;
+}
+
+function getWeatherActivities(weather) {
+  const sunHours = parseFloat(String(weather.sun_hours || "").replace("h", "").replace(",", "."));
+  const rainDays = parseFloat(String(weather.rain_days || "").replace(",", "."));
+  const ideas = ["🌅 Früher Strandspaziergang mit ruhiger See", "🍹 Sundowner mit Blick aufs Meer"];
+
+  if (!Number.isNaN(sunHours) && sunHours >= 8) {
+    ideas.unshift("🤿 Perfektes Zeitfenster für Pool, Strand und Wassersport");
+  }
+  if (!Number.isNaN(rainDays) && rainDays >= 8) {
+    ideas.push("🧖‍♀️ Bei kurzen Schauern: Spa, Kulinarik oder Kultur-Highlights");
+  }
+
+  return ideas.slice(0, 3);
+}
+
+function escapeHTML(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // Make switchDetailTab global
