@@ -4,6 +4,7 @@ let tours = [];
 let agentProfile = { name: "", company: "", email: "", phone: "" };
 const PREFS = ["Strand","Familie","Kulinarik","Kultur","Wellness","Sport & Aktiv","Nightlife","Shopping","Wassersport","Wandern","Romantik","Fotografie"];
 const PREF_ICONS = {"strand":"🏖","familie":"👨‍👩‍👧","kulinarik":"🍽","kultur":"🏛","wellness":"🧖","sport & aktiv":"🏃","nightlife":"🎉","shopping":"🛍","wassersport":"🤿","wandern":"🥾","romantik":"💑","fotografie":"📸"};
+const TRAVELER_TYPE_OPTIONS = { family:"Familie mit Kindern", solo:"Alleinreisend", couple:"Pärchen" };
 
 // ── AGENT PROFILE ──
 function loadAgentProfile() {
@@ -135,7 +136,7 @@ function newTour() {
   }
   currentTour = {
     customer_name: "", customer_email: "", destination: "", date_from: "", date_to: "",
-    departure_airport: "", meal_plan: "All-Inclusive", preferences: [], personal_note: "",
+    departure_airport: "", meal_plan: "All-Inclusive", traveler_type: "family", preferences: [], personal_note: "",
     hero_video_url: "", hotels: [], pois: [], day_items: [], transfers: [], weather: {},
     agent_name: agentProfile.name, agent_company: agentProfile.company,
     agent_email: agentProfile.email, agent_phone: agentProfile.phone, status: "draft"
@@ -175,6 +176,7 @@ function populateEditor() {
   document.getElementById("fDestination").value = t.destination || "";
   document.getElementById("fAirport").value = t.departure_airport || "";
   document.getElementById("fMealPlan").value = t.meal_plan || "All-Inclusive";
+  document.getElementById("fTravelerType").value = getTravelerTypeFromTour(t);
   document.getElementById("fNote").value = t.personal_note || "";
   document.getElementById("fHeroVideo").value = t.hero_video_url || "";
 
@@ -216,6 +218,7 @@ function renderHotelEditorLists(index) {
   renderEditableList("poiList", h?.pois || [], "poi");
   renderEditableList("dayList", h?.day_items || [], "day");
   renderEditableList("transferList", h?.transfers || [], "transfer");
+  renderRoomCategoryManager();
 }
 
 // ── PREFERENCES ──
@@ -286,7 +289,7 @@ function addHotel() {
       price_note: document.getElementById("mHotelPriceNote").value,
       video_url: document.getElementById("mHotelVideo").value,
       place_id: null, photo_url: "", lat: null, lng: null,
-      description: "", pools: [], restaurants: [], room: {}, reviews: []
+      description: "", pools: [], restaurants: [], room: {}, room_options: [], selected_room_index: 0, room_source_url: "", reviews: []
     };
     if (!hotel.name) return alert("Bitte Hotelnamen eingeben");
     if (!currentTour.hotels) currentTour.hotels = [];
@@ -363,6 +366,7 @@ async function generateHotelContent(hotelIndex) {
       dates: dates,
       nights: nights,
       meal_plan: mealPlan,
+      traveler_type: document.getElementById("fTravelerType")?.value || "family",
       preferences: prefs
     });
 
@@ -371,6 +375,16 @@ async function generateHotelContent(hotelIndex) {
     h.pools = data.pools || [];
     h.restaurants = data.restaurants || [];
     h.room = data.room || {};
+    if (!Array.isArray(h.room_options)) h.room_options = [];
+    if (h.room && Object.keys(h.room).length && h.room_options.length === 0) {
+      h.room_options = [{
+        category: h.room.type || "Zimmerkategorie",
+        size: h.room.size || "",
+        description: h.room.description || "",
+        features: h.room.features || []
+      }];
+      h.selected_room_index = 0;
+    }
     h.reviews = data.reviews || [];
     
     // Store POIs, day plan, transfers, weather PER HOTEL
@@ -575,6 +589,160 @@ function addItem(type) {
   editItem(type, list.length - 1);
 }
 
+
+function normalizeRoomOption(option = {}) {
+  return {
+    category: option.category || option.type || "Zimmerkategorie",
+    size: option.size || "",
+    description: option.description || "",
+    features: Array.isArray(option.features) ? option.features : []
+  };
+}
+
+function ensureRoomOptions(hotel) {
+  if (!hotel) return [];
+  if (!Array.isArray(hotel.room_options)) hotel.room_options = [];
+  if (hotel.room_options.length === 0 && hotel.room && Object.keys(hotel.room).length) {
+    hotel.room_options = [normalizeRoomOption(hotel.room)];
+    hotel.selected_room_index = 0;
+  }
+  if (typeof hotel.selected_room_index !== "number") hotel.selected_room_index = 0;
+  return hotel.room_options;
+}
+
+function renderRoomCategoryManager() {
+  const h = (currentTour.hotels || [])[getEditingHotelIndex()];
+  const infoEl = document.getElementById("roomCategoryInfo");
+  const listEl = document.getElementById("roomCategoryList");
+  if (!infoEl || !listEl) return;
+  if (!h) {
+    infoEl.textContent = "Bitte zuerst ein Hotel auswählen.";
+    listEl.innerHTML = "";
+    return;
+  }
+
+  const options = ensureRoomOptions(h);
+  const roomSourceInput = document.getElementById("roomSourceUrl");
+  if (roomSourceInput) roomSourceInput.value = h.room_source_url || "";
+  infoEl.textContent = `Ausgewähltes Hotel: ${h.name || "–"}. Markieren Sie eine Kategorie als Standard für die Kundenseite.`;
+
+  if (options.length === 0) {
+    listEl.innerHTML = '<div class="info-note">Noch keine Zimmerkategorien vorhanden. Legen Sie mindestens eine Kategorie an.</div>';
+    return;
+  }
+
+  listEl.innerHTML = options.map((room, i) => {
+    const features = (room.features || []).slice(0, 3).map(f => f.title || f).filter(Boolean).join(" · ");
+    return `
+      <div class="editable-item" style="display:block;">
+        <div style="display:flex;justify-content:space-between;gap:.8rem;align-items:flex-start;">
+          <div>
+            <div class="ei-title">${esc(room.category)} ${room.size ? `<span class="ei-time">(${esc(room.size)})</span>` : ""}</div>
+            <div class="ei-desc">${esc(room.description || "Keine Beschreibung")}</div>
+            ${features ? `<div class="ei-time" style="margin-top:.35rem;">Highlights: ${esc(features)}</div>` : ""}
+          </div>
+          <div style="display:flex;gap:.35rem;flex-wrap:wrap;justify-content:flex-end;">
+            <button class="btn btn-sm ${h.selected_room_index === i ? "btn-primary" : ""}" onclick="selectRoomOption(${i})">${h.selected_room_index === i ? "✓ Gewählt" : "Als Standard"}</button>
+            <button class="btn btn-sm" onclick="editRoomOption(${i})">Bearbeiten</button>
+            <button class="btn btn-sm btn-danger" onclick="removeRoomOption(${i})">✕</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function addRoomOption() {
+  const h = (currentTour.hotels || [])[getEditingHotelIndex()];
+  if (!h) return alert("Bitte zuerst ein Hotel auswählen.");
+  ensureRoomOptions(h);
+  openRoomOptionModal({ category:"", size:"", description:"", features:[] }, -1);
+}
+
+function editRoomOption(index) {
+  const h = (currentTour.hotels || [])[getEditingHotelIndex()];
+  if (!h) return;
+  const options = ensureRoomOptions(h);
+  const room = options[index];
+  if (!room) return;
+  openRoomOptionModal(room, index);
+}
+
+function openRoomOptionModal(room, index) {
+  const featuresText = (room.features || []).map(f => typeof f === "string" ? f : (f.title || f.detail || "")).filter(Boolean).join("\n");
+  openModal(index >= 0 ? "Zimmerkategorie bearbeiten" : "Zimmerkategorie hinzufügen", `
+    <div class="form-group" style="margin-bottom:.8rem;"><label class="form-label">Zimmerkategorie</label><input class="form-input" id="mRoomCategory" value="${esc(room.category || "")}" placeholder="z.B. Deluxe Ocean View"></div>
+    <div class="form-group" style="margin-bottom:.8rem;"><label class="form-label">Größe (optional)</label><input class="form-input" id="mRoomSize" value="${esc(room.size || "")}" placeholder="z.B. 42 m²"></div>
+    <div class="form-group" style="margin-bottom:.8rem;"><label class="form-label">Beschreibung</label><textarea class="form-textarea" id="mRoomDesc">${esc(room.description || "")}</textarea></div>
+    <div class="form-group"><label class="form-label">Highlights (eine Zeile = ein Highlight)</label><textarea class="form-textarea" id="mRoomFeatures" placeholder="Kingsize-Bett\nMeerblick\nBalkon">${esc(featuresText)}</textarea></div>
+  `, () => saveRoomOption(index));
+}
+
+function saveRoomOption(index) {
+  const h = (currentTour.hotels || [])[getEditingHotelIndex()];
+  if (!h) return;
+  const options = ensureRoomOptions(h);
+  const category = document.getElementById("mRoomCategory").value.trim();
+  if (!category) return alert("Bitte eine Zimmerkategorie angeben.");
+  const rawFeatures = document.getElementById("mRoomFeatures").value.split("\n").map(v => v.trim()).filter(Boolean);
+  const roomOption = {
+    category,
+    size: document.getElementById("mRoomSize").value.trim(),
+    description: document.getElementById("mRoomDesc").value.trim(),
+    features: rawFeatures.map(item => ({ title: item, detail: "" }))
+  };
+
+  if (index >= 0) options[index] = roomOption;
+  else options.push(roomOption);
+
+  if (typeof h.selected_room_index !== "number" || h.selected_room_index < 0) h.selected_room_index = 0;
+  if (index === -1 && options.length === 1) h.selected_room_index = 0;
+
+  h.room_options = options;
+  h.room = {
+    type: options[h.selected_room_index]?.category || roomOption.category,
+    size: options[h.selected_room_index]?.size || roomOption.size,
+    description: options[h.selected_room_index]?.description || roomOption.description,
+    features: options[h.selected_room_index]?.features || roomOption.features
+  };
+
+  closeModal();
+  renderRoomCategoryManager();
+}
+
+function selectRoomOption(index) {
+  const h = (currentTour.hotels || [])[getEditingHotelIndex()];
+  if (!h) return;
+  const options = ensureRoomOptions(h);
+  if (!options[index]) return;
+  h.selected_room_index = index;
+  h.room = {
+    type: options[index].category,
+    size: options[index].size,
+    description: options[index].description,
+    features: options[index].features
+  };
+  renderRoomCategoryManager();
+}
+
+function removeRoomOption(index) {
+  const h = (currentTour.hotels || [])[getEditingHotelIndex()];
+  if (!h) return;
+  const options = ensureRoomOptions(h);
+  if (!options[index]) return;
+  options.splice(index, 1);
+  if (h.selected_room_index >= options.length) h.selected_room_index = Math.max(0, options.length - 1);
+  h.room_options = options;
+  const active = options[h.selected_room_index];
+  h.room = active ? {
+    type: active.category,
+    size: active.size,
+    description: active.description,
+    features: active.features
+  } : {};
+  renderRoomCategoryManager();
+}
+
 // ── DRAG & DROP ──
 function setupDragDrop(containerId, type) {
   const container = document.getElementById(containerId);
@@ -603,12 +771,88 @@ function reorderFromDOM(containerId, type) {
   renderEditableList(cid, reordered, type);
 }
 
+
+function getTravelerTypeFromTour(tourData = {}) {
+  if (tourData.traveler_type && TRAVELER_TYPE_OPTIONS[tourData.traveler_type]) return tourData.traveler_type;
+  const prefs = Array.isArray(tourData.preferences) ? tourData.preferences : [];
+  const meta = prefs.find(p => String(p).startsWith("__traveler_type:"));
+  const parsed = meta ? meta.split(":")[1] : "";
+  return TRAVELER_TYPE_OPTIONS[parsed] ? parsed : "family";
+}
+
+
+function mapExtractedRoomToOption(room = {}) {
+  const details = [];
+  if (room.occupancy) details.push(`max. ${room.occupancy} Gäste`);
+  if (room.beds) details.push(room.beds);
+  const amenities = Array.isArray(room.amenities) ? room.amenities.slice(0, 6) : [];
+
+  return {
+    category: room.room_name || "Zimmerkategorie",
+    size: "",
+    description: [room.description, details.join(" · ")].filter(Boolean).join(" · "),
+    features: amenities.map(item => ({ title: item, detail: "" }))
+  };
+}
+
+async function extractRoomsForCurrentHotel() {
+  const h = (currentTour.hotels || [])[getEditingHotelIndex()];
+  if (!h) return alert("Bitte zuerst ein Hotel auswählen.");
+
+  const url = document.getElementById("roomSourceUrl")?.value?.trim();
+  if (!url) return alert("Bitte eine Hotel-URL eingeben.");
+
+  const trigger = event?.target;
+  if (trigger) {
+    trigger.disabled = true;
+    trigger.textContent = "⏳ Extrahiere…";
+  }
+
+  try {
+    const data = await TravelDiveAPI.extractHotelRooms(url);
+    if (data.error) throw new Error(data.error);
+
+    const options = (data.rooms || []).map(mapExtractedRoomToOption).filter(r => r.category);
+    if (options.length === 0) {
+      alert("Keine Zimmerdaten gefunden. Bitte URL prüfen oder Zimmer manuell anlegen.");
+      return;
+    }
+
+    h.room_source_url = url;
+    h.room_options = options;
+    h.selected_room_index = 0;
+    h.room = {
+      type: options[0].category,
+      size: options[0].size,
+      description: options[0].description,
+      features: options[0].features
+    };
+
+    renderRoomCategoryManager();
+    alert(`✓ ${options.length} Zimmertypen extrahiert.`);
+  } catch (e) {
+    alert("Zimmerextraktion fehlgeschlagen: " + (e.message || e));
+  } finally {
+    if (trigger) {
+      trigger.disabled = false;
+      trigger.textContent = "🔎 Zimmer extrahieren";
+    }
+  }
+}
+
 // ── SAVE & PUBLISH ──
 function collectTourData() {
   const d1 = document.getElementById("fDateFrom").value;
   const d2 = document.getElementById("fDateTo").value;
+  const travelerType = document.getElementById("fTravelerType")?.value || "family";
+  const preferences = getSelectedPrefs();
+  const metaPref = `__traveler_type:${travelerType}`;
+  const mergedPrefs = [...preferences.filter(p => !String(p).startsWith("__traveler_type:")), metaPref];
+
+  const { traveler_type: _travelerTypeIgnored, ...safeTour } = currentTour || {};
+
   return {
-    ...currentTour,
+    ...safeTour,
     customer_name: document.getElementById("fCustomer").value,
     customer_email: document.getElementById("fEmail").value,
     destination: document.getElementById("fDestination").value,
@@ -617,7 +861,7 @@ function collectTourData() {
     nights: calcNights(),
     departure_airport: document.getElementById("fAirport").value,
     meal_plan: document.getElementById("fMealPlan").value,
-    preferences: getSelectedPrefs(),
+    preferences: mergedPrefs,
     personal_note: document.getElementById("fNote").value,
     hero_video_url: document.getElementById("fHeroVideo").value,
     agent_name: agentProfile.name,

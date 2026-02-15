@@ -3,7 +3,7 @@ const Anthropic = require("@anthropic-ai/sdk");
 
 router.post("/", async (req, res) => {
   try {
-    const { hotel_name, location, destination, dates, nights, meal_plan, preferences } = req.body;
+    const { hotel_name, location, destination, dates, nights, meal_plan, traveler_type, preferences } = req.body;
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
     const prompt = `Du bist ein erfahrener Reiseberater, der immersive Reise-Touren erstellt. Generiere Inhalte für folgendes Hotel/Reiseziel:
@@ -13,6 +13,7 @@ Ort: ${location}, ${destination}
 Zeitraum: ${dates} (${nights} Nächte)
 Verpflegung: ${meal_plan}
 Kundenvorlieben: ${(preferences || []).join(", ")}
+Reiseprofil: ${traveler_type || "family"} (family = Familie mit Kindern, solo = Alleinreisend, couple = Pärchen)
 
 Erstelle folgendes als JSON (NUR JSON, keine Erklärungen, kein Markdown):
 
@@ -50,7 +51,7 @@ Erstelle folgendes als JSON (NUR JSON, keine Erklärungen, kein Markdown):
     "rain_days": "X"
   },
   "reviews": [
-    {"text": "Bewertungstext, realistisch", "author": "Vorname & Partner/Familie, Stadt", "date": "Monat Jahr"}
+    {"text": "Bewertungstext, realistisch", "author": "Vorname & Partner/Familie, Stadt", "date": "Monat Jahr", "source": "Tripadvisor|HolidayCheck|Google", "traveler_type": "family|solo|couple"}
   ],
   "hero_title": "Kurzer emotionaler Titel mit Ortsname",
   "hero_subtitle": "1 Satz, der Vorfreude weckt"
@@ -61,7 +62,7 @@ WICHTIG:
 - Generiere 4-5 POIs passend zu den Vorlieben
 - Generiere 7-8 Tagesplan-Einträge von 08:00 bis 21:30
 - Generiere 3-4 Transferoptionen vom nächsten Flughafen
-- Generiere 3 realistische Gästebewertungen
+- Generiere 3 realistische Gästebewertungen, mindestens 2 davon passend zum Reiseprofil
 - Alle Texte auf Deutsch, lebendig und persönlich`;
 
     const response = await client.messages.create({
