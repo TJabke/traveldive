@@ -34,6 +34,7 @@
     <h1 id="heroTitle">Ihr Traumurlaub wartet</h1>
     <p id="heroSubtitle"></p>
     <div class="hero-meta" id="heroMeta"></div>
+    <div class="hero-countdown" id="heroCountdown" style="display:none;"></div>
     <div class="hero-story" id="heroStory"></div>
     <div class="hero-highlights" id="heroHighlights"></div>
     <div class="personalized-for" id="heroPref" style="display:none;">
@@ -144,6 +145,12 @@
 <div class="error-page" id="errorPage" style="display:none;">
   <h1>Tour nicht gefunden</h1>
   <p>Dieser Link ist leider nicht gültig oder die Tour wurde entfernt. Bitte kontaktieren Sie Ihr Reisebüro.</p>
+</div>
+
+<div class="photo-lightbox" id="photoLightbox" style="display:none;" onclick="closePhotoLightbox()">
+  <button class="photo-lightbox-close" type="button" aria-label="Schließen" onclick="closePhotoLightbox(event)">×</button>
+  <img id="photoLightboxImage" src="" alt="Hotelbild groß" />
+  <div class="photo-lightbox-caption" id="photoLightboxCaption"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
