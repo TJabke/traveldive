@@ -37,8 +37,8 @@ async function initTour() {
 
     // Render all sections
     renderHero();
-    renderTransfers();
     renderHotelSelector();
+    renderTransfers();
     renderHotelDetail(0);
     renderWeather();
     renderPOIs();
@@ -93,6 +93,18 @@ async function renderHero() {
   document.getElementById("heroMeta").innerHTML = metaItems.map(m => 
     `<div class="hero-meta-item">${m}</div>`
   ).join("");
+
+  const hotel = (tour.hotels || [])[selectedHotelIndex];
+  const story = tour.personal_note || `Stellen Sie sich vor: Morgens mit Meerblick aufwachen, tagsüber ${tour.destination} entdecken und abends entspannt den Tag ausklingen lassen.`;
+  document.getElementById("heroStory").textContent = story;
+
+  const highlights = [
+    `🏝 ${tour.destination}`,
+    `🛏 ${tour.nights} Nächte`,
+    tour.meal_plan ? `🍽 ${tour.meal_plan}` : null,
+    hotel?.name ? `🏨 ${hotel.name}` : null
+  ].filter(Boolean);
+  document.getElementById("heroHighlights").innerHTML = highlights.map(h => `<span class="hero-highlight">${h}</span>`).join("");
 
   // Preferences
   const prefs = tour.preferences || [];
@@ -288,6 +300,7 @@ function renderHotelDetail(index) {
           <div class="review-card">
             <p>"${r.text}"</p>
             <div class="reviewer">— ${r.author}${r.date ? " · "+r.date : ""}</div>
+            ${r.source ? `<div class="review-source">Quelle: ${r.source}</div>` : ""}
           </div>
         `).join("")}
       </div>
@@ -423,6 +436,14 @@ async function renderWeather() {
   document.getElementById("weatherGrid").innerHTML = cards.map(c => `
     <div class="weather-card"><div class="wicon">${c.icon}</div><div class="temp">${c.val}</div><div class="wlabel">${c.label}</div></div>
   `).join("");
+
+  const moodText = getWeatherMood(weather, monthNames[month]);
+  document.getElementById("weatherMood").textContent = moodText;
+
+  const activityIdeas = getWeatherActivities(weather);
+  document.getElementById("weatherActivities").innerHTML = activityIdeas.map(idea => `
+    <div class="weather-activity">${idea}</div>
+  `).join("");
   
   document.getElementById("weatherSub").textContent = `${monthNames[month]} ist eine wunderbare Reisezeit für ${tour.destination}.`;
 }
@@ -474,10 +495,19 @@ function renderMap() {
   const h = (tour.hotels || [])[selectedHotelIndex];
   if (!h) return;
 
-  const query = `${h.name} ${h.location || tour.destination}`;
+  const query = h.place_id
+    ? `place_id:${h.place_id}`
+    : `${h.name} ${h.location || tour.destination}`;
   const url = TravelDiveAPI.getGoogleMapsEmbedUrl(query, 14);
   if (url) {
-    document.getElementById("mapWrap").innerHTML = `<iframe src="${url}" allowfullscreen loading="lazy"></iframe>`;
+    const pois = (h.pois || tour.pois || []).slice(0, 4);
+    document.getElementById("mapWrap").innerHTML = `
+      <iframe src="${url}" allowfullscreen loading="lazy"></iframe>
+      <div class="map-locations">
+        <span class="map-location active">🏨 ${escapeHTML(h.name)}</span>
+        ${pois.map(p => `<span class="map-location">📍 ${escapeHTML(p.name || "Highlight")}</span>`).join("")}
+      </div>
+    `;
   }
 }
 
@@ -573,8 +603,8 @@ function updateCTASelections() {
 function renderProgress() {
   const sections = [
     { id:"hero", label:"Willkommen" },
-    { id:"transfer", label:"Anreise" },
     { id:"selector", label:"Hotels" },
+    { id:"transfer", label:"Anreise" },
     { id:"hotel", label:"Details" },
     { id:"weather", label:"Klima" },
     { id:"explore", label:"Umgebung" },
@@ -663,6 +693,43 @@ function formatDateRange(from, to) {
     return `${f.getDate()}.–${t.toLocaleDateString("de-DE", opts)}`;
   }
   return t ? `${f.toLocaleDateString("de-DE",{day:"numeric",month:"long"})} – ${t.toLocaleDateString("de-DE",opts)}` : f.toLocaleDateString("de-DE",opts);
+}
+
+function getWeatherMood(weather, monthName) {
+  const sunHours = parseFloat(String(weather.sun_hours || "").replace("h", "").replace(",", "."));
+  const rainDays = parseFloat(String(weather.rain_days || "").replace(",", "."));
+
+  if (!Number.isNaN(sunHours) && sunHours >= 8) {
+    return `☀️ ${monthName} bringt viel Sonne – perfekt für lange Strandtage und Dinner bei Sonnenuntergang.`;
+  }
+  if (!Number.isNaN(rainDays) && rainDays >= 9) {
+    return `🌴 ${monthName} wirkt tropisch und lebendig – ideal für eine Mischung aus Entspannung, Spa und Ausflügen.`;
+  }
+  return `🌺 ${monthName} bietet angenehme Bedingungen für eine abwechslungsreiche Urlaubswoche.`;
+}
+
+function getWeatherActivities(weather) {
+  const sunHours = parseFloat(String(weather.sun_hours || "").replace("h", "").replace(",", "."));
+  const rainDays = parseFloat(String(weather.rain_days || "").replace(",", "."));
+  const ideas = ["🌅 Früher Strandspaziergang mit ruhiger See", "🍹 Sundowner mit Blick aufs Meer"];
+
+  if (!Number.isNaN(sunHours) && sunHours >= 8) {
+    ideas.unshift("🤿 Perfektes Zeitfenster für Pool, Strand und Wassersport");
+  }
+  if (!Number.isNaN(rainDays) && rainDays >= 8) {
+    ideas.push("🧖‍♀️ Bei kurzen Schauern: Spa, Kulinarik oder Kultur-Highlights");
+  }
+
+  return ideas.slice(0, 3);
+}
+
+function escapeHTML(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // Make switchDetailTab global
