@@ -13,9 +13,11 @@ function loadAgentProfile() {
     if (saved) agentProfile = JSON.parse(saved);
   } catch(e) {}
   updateSidebarAgent();
-  // Show setup prompt if no profile yet
+  // Do not block dashboard usage if profile is not configured yet
   if (!agentProfile.name) {
-    setTimeout(() => showAgentSettings(), 500);
+    agentProfile.name = "Reiseberater";
+    if (!agentProfile.company) agentProfile.company = "TravelDive";
+    saveAgentProfile();
   }
 }
 
@@ -130,15 +132,12 @@ function updateStats() {
 
 // ── NEW TOUR ──
 function newTour() {
-  if (!agentProfile.name) {
-    showAgentSettings();
-    return;
-  }
+  const safeName = (agentProfile.name || "Reiseberater").trim() || "Reiseberater";
   currentTour = {
     customer_name: "", customer_email: "", destination: "", date_from: "", date_to: "",
     departure_airport: "", meal_plan: "All-Inclusive", traveler_type: "family", preferences: [], personal_note: "",
     hero_video_url: "", hotels: [], pois: [], day_items: [], transfers: [], weather: {},
-    agent_name: agentProfile.name, agent_company: agentProfile.company,
+    agent_name: safeName, agent_company: agentProfile.company || "TravelDive",
     agent_email: agentProfile.email, agent_phone: agentProfile.phone, status: "draft"
   };
   populateEditor();
