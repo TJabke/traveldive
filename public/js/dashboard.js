@@ -1,12 +1,71 @@
 // TravelDive Dashboard
 let currentTour = null; // Tour being edited
 let tours = [];
+let agentProfile = { name: "", company: "", email: "", phone: "" };
 const PREFS = ["Strand","Familie","Kulinarik","Kultur","Wellness","Sport & Aktiv","Nightlife","Shopping","Wassersport","Wandern","Romantik","Fotografie"];
 const PREF_ICONS = {"strand":"🏖","familie":"👨‍👩‍👧","kulinarik":"🍽","kultur":"🏛","wellness":"🧖","sport & aktiv":"🏃","nightlife":"🎉","shopping":"🛍","wassersport":"🤿","wandern":"🥾","romantik":"💑","fotografie":"📸"};
+
+// ── AGENT PROFILE ──
+function loadAgentProfile() {
+  try {
+    const saved = localStorage.getItem("traveldive_agent");
+    if (saved) agentProfile = JSON.parse(saved);
+  } catch(e) {}
+  updateSidebarAgent();
+  // Show setup prompt if no profile yet
+  if (!agentProfile.name) {
+    setTimeout(() => showAgentSettings(), 500);
+  }
+}
+
+function saveAgentProfile() {
+  localStorage.setItem("traveldive_agent", JSON.stringify(agentProfile));
+  updateSidebarAgent();
+}
+
+function updateSidebarAgent() {
+  const initials = agentProfile.name 
+    ? agentProfile.name.split(" ").map(n => n[0]).join("").toUpperCase()
+    : "?";
+  document.getElementById("sidebarAvatar").textContent = initials;
+  document.getElementById("sidebarName").textContent = agentProfile.name || "Profil einrichten";
+  document.getElementById("sidebarCompany").textContent = agentProfile.company || "Klicken zum Bearbeiten";
+}
+
+function showAgentSettings() {
+  const fields = `
+    <div class="form-group" style="margin-bottom:.8rem;">
+      <label class="form-label">Ihr Name</label>
+      <input class="form-input" id="mAgentName" value="${esc(agentProfile.name||"")}" placeholder="z.B. Sarah Meier">
+    </div>
+    <div class="form-group" style="margin-bottom:.8rem;">
+      <label class="form-label">Reisebüro / Agentur</label>
+      <input class="form-input" id="mAgentCompany" value="${esc(agentProfile.company||"")}" placeholder="z.B. Sonnenklar Reisebüro">
+    </div>
+    <div class="form-group" style="margin-bottom:.8rem;">
+      <label class="form-label">E-Mail (wird im Tour-CTA angezeigt)</label>
+      <input class="form-input" id="mAgentEmail" type="email" value="${esc(agentProfile.email||"")}" placeholder="sarah@reisebuero.de">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Telefon (optional)</label>
+      <input class="form-input" id="mAgentPhone" value="${esc(agentProfile.phone||"")}" placeholder="+49 89 12345678">
+    </div>
+  `;
+  openModal("Beraterprofil", fields, () => {
+    agentProfile.name = document.getElementById("mAgentName").value.trim();
+    agentProfile.company = document.getElementById("mAgentCompany").value.trim();
+    agentProfile.email = document.getElementById("mAgentEmail").value.trim();
+    agentProfile.phone = document.getElementById("mAgentPhone").value.trim();
+    if (!agentProfile.name) return alert("Bitte geben Sie Ihren Namen ein.");
+    saveAgentProfile();
+    closeModal();
+  });
+}
 
 // ── INIT ──
 async function init() {
   await TravelDiveAPI.init();
+  loadAgentProfile();
   renderPrefTags();
   loadTours();
 }
@@ -70,11 +129,16 @@ function updateStats() {
 
 // ── NEW TOUR ──
 function newTour() {
+  if (!agentProfile.name) {
+    showAgentSettings();
+    return;
+  }
   currentTour = {
     customer_name: "", customer_email: "", destination: "", date_from: "", date_to: "",
     departure_airport: "", meal_plan: "All-Inclusive", preferences: [], personal_note: "",
     hero_video_url: "", hotels: [], pois: [], day_items: [], transfers: [], weather: {},
-    agent_name: "Sarah Meier", agent_company: "Sonnenklar Reisebüro", status: "draft"
+    agent_name: agentProfile.name, agent_company: agentProfile.company,
+    agent_email: agentProfile.email, agent_phone: agentProfile.phone, status: "draft"
   };
   populateEditor();
   showView("editor");
@@ -555,7 +619,11 @@ function collectTourData() {
     meal_plan: document.getElementById("fMealPlan").value,
     preferences: getSelectedPrefs(),
     personal_note: document.getElementById("fNote").value,
-    hero_video_url: document.getElementById("fHeroVideo").value
+    hero_video_url: document.getElementById("fHeroVideo").value,
+    agent_name: agentProfile.name,
+    agent_company: agentProfile.company,
+    agent_email: agentProfile.email,
+    agent_phone: agentProfile.phone
   };
 }
 

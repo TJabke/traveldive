@@ -17,9 +17,9 @@
     <div class="sidebar-item" onclick="showView('editor')" data-view="editor">✏️ Tour bearbeiten</div>
     <div class="sidebar-item" onclick="showView('analytics')" data-view="analytics">📈 Analytics</div>
   </nav>
-  <div class="sidebar-user">
-    <div class="sidebar-avatar">SM</div>
-    <div><div class="sidebar-uname">Sarah Meier</div><div class="sidebar-urole">Sonnenklar Reisebüro</div></div>
+  <div class="sidebar-user" onclick="showAgentSettings()" style="cursor:pointer;" title="Profil bearbeiten">
+    <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+    <div><div class="sidebar-uname" id="sidebarName">Profil einrichten</div><div class="sidebar-urole" id="sidebarCompany">Klicken zum Bearbeiten</div></div>
   </div>
 </aside>
 

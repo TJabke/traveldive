@@ -12,6 +12,8 @@ create table tours (
   -- Agent info
   agent_name text not null default 'Reiseberater',
   agent_company text default '',
+  agent_email text default '',
+  agent_phone text default '',
   
   -- Customer info
   customer_name text not null,

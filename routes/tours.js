@@ -52,6 +52,8 @@ router.post("/", async (req, res) => {
       slug: slug(b.destination || "tour", b.customer_name || "kunde"),
       agent_name: b.agent_name || "Reiseberater",
       agent_company: b.agent_company || "",
+      agent_email: b.agent_email || "",
+      agent_phone: b.agent_phone || "",
       customer_name: b.customer_name,
       customer_email: b.customer_email || "",
       destination: b.destination,

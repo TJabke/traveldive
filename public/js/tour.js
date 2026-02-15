@@ -68,7 +68,7 @@ function showError() {
 }
 
 // ── HERO ──
-function renderHero() {
+async function renderHero() {
   // Agent info
   const initials = tour.agent_name.split(" ").map(n=>n[0]).join("");
   document.getElementById("agentInfo").innerHTML = `
@@ -104,7 +104,7 @@ function renderHero() {
     }).join("");
   }
 
-  // Hero video
+  // Hero background: Video takes priority, then destination image, then gradient
   if (tour.hero_video_url) {
     const vid = extractYouTubeId(tour.hero_video_url);
     if (vid) {
@@ -114,7 +114,38 @@ function renderHero() {
         <div class="hero-video-fallback"></div>
       `;
     }
+  } else {
+    // Load destination/hotel image as hero background
+    loadHeroBackground();
   }
+}
+
+async function loadHeroBackground() {
+  const fallback = document.querySelector(".hero-video-fallback");
+  if (!fallback) return;
+
+  // Try multiple search queries for best result
+  const h = (tour.hotels || [])[0];
+  const queries = [
+    h ? `${h.name} ${h.location || ""}` : null,
+    `${tour.destination} landscape panorama`,
+    tour.destination
+  ].filter(Boolean);
+
+  for (const query of queries) {
+    try {
+      const results = await TravelDiveAPI.searchPlace(query);
+      if (results[0]?.photo_ref) {
+        const url = TravelDiveAPI.getPlacePhotoUrl(results[0].photo_ref, 1600);
+        fallback.style.backgroundImage = `url('${url}')`;
+        fallback.style.backgroundSize = "cover";
+        fallback.style.backgroundPosition = "center";
+        // Keep gradient as overlay via the existing hero-overlay element
+        return;
+      }
+    } catch(e) { console.warn("Hero bg search failed:", e); }
+  }
+  // If all searches fail, gradient fallback stays via CSS
 }
 
 // ── TRANSFERS ──
@@ -303,26 +334,62 @@ async function renderHotelPhotos(hotel) {
   const container = document.getElementById("hotelPhotos");
   container.innerHTML = '<div class="skeleton skeleton-img"></div>'.repeat(4);
 
+  let photoRefs = [];
+
+  // Strategy 1: Use place_id if available
   if (hotel.place_id) {
     try {
       const details = await TravelDiveAPI.getPlaceDetails(hotel.place_id);
-      const refs = details.photo_refs || [];
-      if (refs.length >= 4) {
-        const labels = ["Außenansicht", "Zimmer", "Pool", "Restaurant"];
-        container.innerHTML = refs.slice(0, 4).map((ref, i) => `
-          <div class="hotel-photo" style="background-image:url('${TravelDiveAPI.getPlacePhotoUrl(ref, 600)}')">
-            <div class="hotel-photo-label">${labels[i] || ""}</div>
-          </div>
-        `).join("");
-        return;
-      }
-    } catch(e) { console.warn("Photo load failed:", e); }
+      photoRefs = details.photo_refs || [];
+    } catch(e) { console.warn("Place details failed:", e); }
   }
 
-  // Fallback: use stored photo_url or placeholder
-  container.innerHTML = hotel.photo_url ? `
-    <div class="hotel-photo" style="background-image:url('${hotel.photo_url}');grid-column:1/-1;aspect-ratio:21/9;"></div>
-  ` : "";
+  // Strategy 2: Search by name if no photos yet
+  if (photoRefs.length === 0) {
+    try {
+      const query = `${hotel.name} ${hotel.location || tour.destination || ""}`;
+      const results = await TravelDiveAPI.searchPlace(query);
+      if (results[0]) {
+        // Save place_id for future use
+        if (!hotel.place_id) {
+          hotel.place_id = results[0].place_id;
+          hotel.lat = results[0].lat;
+          hotel.lng = results[0].lng;
+        }
+        // Get full details for more photos
+        try {
+          const details = await TravelDiveAPI.getPlaceDetails(results[0].place_id);
+          photoRefs = details.photo_refs || [];
+        } catch(e2) {
+          // At least use the search thumbnail
+          if (results[0].photo_ref) photoRefs = [results[0].photo_ref];
+        }
+      }
+    } catch(e) { console.warn("Place search failed:", e); }
+  }
+
+  // Render photos
+  if (photoRefs.length > 0) {
+    const labels = ["Außenansicht", "Zimmer", "Pool", "Restaurant", "Lobby", "Strand", "Spa", "Garten"];
+    const count = Math.min(photoRefs.length, 4);
+    container.innerHTML = photoRefs.slice(0, count).map((ref, i) => `
+      <div class="hotel-photo" style="background-image:url('${TravelDiveAPI.getPlacePhotoUrl(ref, 600)}')">
+        <div class="hotel-photo-label">${labels[i] || ""}</div>
+      </div>
+    `).join("");
+  } else if (hotel.photo_url) {
+    // Fallback: single stored photo
+    container.innerHTML = `
+      <div class="hotel-photo" style="background-image:url('${hotel.photo_url}');grid-column:1/-1;aspect-ratio:21/9;"></div>
+    `;
+  } else {
+    // No photos at all - show placeholder
+    container.innerHTML = `
+      <div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text-light);font-size:.85rem;background:var(--sand);border-radius:12px;">
+        📷 Hotelbilder werden geladen sobald die Verbindung zu Google Places verfügbar ist.
+      </div>
+    `;
+  }
 }
 
 // ── WEATHER ──
@@ -385,15 +452,19 @@ function renderPOIs() {
 
   // Load real photos from Google Places
   pois.forEach(async (p, i) => {
-    if (p.search_query || p.name) {
-      try {
-        const results = await TravelDiveAPI.searchPlace(`${p.search_query || p.name} ${tour.destination}`);
-        if (results[0]?.photo_ref) {
-          const url = TravelDiveAPI.getPlacePhotoUrl(results[0].photo_ref, 600);
-          const el = document.getElementById(`poi-img-${i}`);
-          if (el) el.style.backgroundImage = `url('${url}')`;
+    const searchTerm = p.search_query || p.name;
+    if (!searchTerm) return;
+    try {
+      const results = await TravelDiveAPI.searchPlace(`${searchTerm} ${tour.destination}`);
+      if (results[0]?.photo_ref) {
+        const url = TravelDiveAPI.getPlacePhotoUrl(results[0].photo_ref, 600);
+        const el = document.getElementById(`poi-img-${i}`);
+        if (el) {
+          el.style.backgroundImage = `url('${url}')`;
         }
-      } catch(e) { /* keep fallback */ }
+      }
+    } catch(e) {
+      console.warn(`POI photo failed for "${searchTerm}":`, e);
     }
   });
 }
@@ -457,11 +528,28 @@ function renderCTA() {
 
   const agent = tour.agent_name.split(" ")[0];
   document.getElementById("ctaBtn").textContent = `Jetzt bei ${agent} anfragen`;
+  
+  // Build contact info
+  const contactInfo = document.getElementById("ctaContact");
+  if (contactInfo) {
+    const parts = [];
+    if (tour.agent_email) parts.push(`<a href="mailto:${tour.agent_email}" style="color:var(--ocean);text-decoration:none;">✉️ ${tour.agent_email}</a>`);
+    if (tour.agent_phone) parts.push(`<a href="tel:${tour.agent_phone}" style="color:var(--ocean);text-decoration:none;">📞 ${tour.agent_phone}</a>`);
+    contactInfo.innerHTML = parts.join('<span style="margin:0 .8rem;color:var(--text-light);">·</span>');
+  }
+
   document.getElementById("ctaBtn").onclick = function() {
     TravelDiveTracker.trackCTAClick();
-    // Could open email or WhatsApp
-    if (tour.customer_email) {
-      alert(`Ihre Anfrage wurde an ${tour.agent_name} gesendet! Sie erhalten in Kürze eine Antwort.`);
+    if (tour.agent_email) {
+      const hotel = (tour.hotels || [])[selectedHotelIndex];
+      const subject = encodeURIComponent(`Anfrage: ${tour.destination}${hotel ? " – " + hotel.name : ""}`);
+      const body = encodeURIComponent(
+        `Hallo ${tour.agent_name},\n\nich interessiere mich für das Angebot "${tour.destination}"` +
+        (hotel ? ` im ${hotel.name}` : "") +
+        (selectedTransfer ? `\n\nBevorzugter Transfer: ${selectedTransfer}` : "") +
+        `\n\nBitte kontaktieren Sie mich für weitere Details.\n\nMit freundlichen Grüßen`
+      );
+      window.location.href = `mailto:${tour.agent_email}?subject=${subject}&body=${body}`;
     } else {
       alert(`Vielen Dank für Ihr Interesse! ${tour.agent_name} wird sich bei Ihnen melden.`);
     }
