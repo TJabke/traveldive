@@ -290,6 +290,7 @@ function addHotel() {
       video_url: document.getElementById("mHotelVideo").value,
       place_id: null, photo_url: "", lat: null, lng: null,
       description: "", pools: [], restaurants: [], room: {}, room_options: [], selected_room_index: 0, room_source_url: "", reviews: []
+      description: "", pools: [], restaurants: [], room: {}, room_options: [], selected_room_index: 0, reviews: []
     };
     if (!hotel.name) return alert("Bitte Hotelnamen eingeben");
     if (!currentTour.hotels) currentTour.hotels = [];
