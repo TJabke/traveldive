@@ -289,6 +289,7 @@ function addHotel() {
       price_note: document.getElementById("mHotelPriceNote").value,
       video_url: document.getElementById("mHotelVideo").value,
       place_id: null, photo_url: "", lat: null, lng: null,
+      description: "", pools: [], restaurants: [], room: {}, room_options: [], selected_room_index: 0, room_source_url: "", reviews: []
       description: "", pools: [], restaurants: [], room: {}, room_options: [], selected_room_index: 0, reviews: []
     };
     if (!hotel.name) return alert("Bitte Hotelnamen eingeben");
@@ -622,6 +623,8 @@ function renderRoomCategoryManager() {
   }
 
   const options = ensureRoomOptions(h);
+  const roomSourceInput = document.getElementById("roomSourceUrl");
+  if (roomSourceInput) roomSourceInput.value = h.room_source_url || "";
   infoEl.textContent = `Ausgewähltes Hotel: ${h.name || "–"}. Markieren Sie eine Kategorie als Standard für die Kundenseite.`;
 
   if (options.length === 0) {
@@ -776,6 +779,66 @@ function getTravelerTypeFromTour(tourData = {}) {
   const meta = prefs.find(p => String(p).startsWith("__traveler_type:"));
   const parsed = meta ? meta.split(":")[1] : "";
   return TRAVELER_TYPE_OPTIONS[parsed] ? parsed : "family";
+}
+
+
+function mapExtractedRoomToOption(room = {}) {
+  const details = [];
+  if (room.occupancy) details.push(`max. ${room.occupancy} Gäste`);
+  if (room.beds) details.push(room.beds);
+  const amenities = Array.isArray(room.amenities) ? room.amenities.slice(0, 6) : [];
+
+  return {
+    category: room.room_name || "Zimmerkategorie",
+    size: "",
+    description: [room.description, details.join(" · ")].filter(Boolean).join(" · "),
+    features: amenities.map(item => ({ title: item, detail: "" }))
+  };
+}
+
+async function extractRoomsForCurrentHotel() {
+  const h = (currentTour.hotels || [])[getEditingHotelIndex()];
+  if (!h) return alert("Bitte zuerst ein Hotel auswählen.");
+
+  const url = document.getElementById("roomSourceUrl")?.value?.trim();
+  if (!url) return alert("Bitte eine Hotel-URL eingeben.");
+
+  const trigger = event?.target;
+  if (trigger) {
+    trigger.disabled = true;
+    trigger.textContent = "⏳ Extrahiere…";
+  }
+
+  try {
+    const data = await TravelDiveAPI.extractHotelRooms(url);
+    if (data.error) throw new Error(data.error);
+
+    const options = (data.rooms || []).map(mapExtractedRoomToOption).filter(r => r.category);
+    if (options.length === 0) {
+      alert("Keine Zimmerdaten gefunden. Bitte URL prüfen oder Zimmer manuell anlegen.");
+      return;
+    }
+
+    h.room_source_url = url;
+    h.room_options = options;
+    h.selected_room_index = 0;
+    h.room = {
+      type: options[0].category,
+      size: options[0].size,
+      description: options[0].description,
+      features: options[0].features
+    };
+
+    renderRoomCategoryManager();
+    alert(`✓ ${options.length} Zimmertypen extrahiert.`);
+  } catch (e) {
+    alert("Zimmerextraktion fehlgeschlagen: " + (e.message || e));
+  } finally {
+    if (trigger) {
+      trigger.disabled = false;
+      trigger.textContent = "🔎 Zimmer extrahieren";
+    }
+  }
 }
 
 // ── SAVE & PUBLISH ──

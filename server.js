@@ -20,6 +20,7 @@ app.use("/api/generate", require("./routes/generate"));
 app.use("/api/places", require("./routes/places"));
 app.use("/api/weather", require("./routes/weather"));
 app.use("/api/tracking", require("./routes/tracking"));
+app.use("/api/extract", require("./routes/extract"));
 
 // Tour page route: /t/:slug → serve tour.html
 app.get("/t/:slug", (req, res) => {

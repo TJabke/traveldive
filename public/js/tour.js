@@ -15,21 +15,30 @@ const PREF_ICONS = {
 
 // ── INIT ──
 async function initTour() {
+  let loadGuardTimer = null;
   try {
-    await TravelDiveAPI.init();
+    loadGuardTimer = setTimeout(() => {
+      const splash = document.getElementById("splash");
+      if (splash && !splash.classList.contains("hidden")) {
+        console.error("Tour init timeout: splash guard triggered");
+        showError();
+      }
+    }, 12000);
+
+    await withTimeout(TravelDiveAPI.init(), 5000, "Konfiguration konnte nicht geladen werden.");
 
     // Get tour slug from URL
     const path = window.location.pathname;
     const slug = path.replace("/t/", "").replace("/tour.html", "").replace(/^\/+|\/+$/g, "");
-    
+
     if (!slug) {
       // Try query param fallback
       const params = new URLSearchParams(window.location.search);
       const qSlug = params.get("slug");
       if (!qSlug) return showError();
-      tour = await TravelDiveAPI.getTour(qSlug);
+      tour = await withTimeout(TravelDiveAPI.getTour(qSlug), 7000, "Tour konnte nicht geladen werden.");
     } else {
-      tour = await TravelDiveAPI.getTour(slug);
+      tour = await withTimeout(TravelDiveAPI.getTour(slug), 7000, "Tour konnte nicht geladen werden.");
     }
 
     if (!tour) return showError();
@@ -60,6 +69,8 @@ async function initTour() {
     console.error("Tour init error:", err);
     setTimeout(() => document.getElementById("splash").classList.add("hidden"), 1000);
     showError();
+  } finally {
+    if (loadGuardTimer) clearTimeout(loadGuardTimer);
   }
 }
 
@@ -565,6 +576,24 @@ function focusMapLocation(index) {
   renderMap();
   if (mapLocations[index].externalUrl) {
     window.open(mapLocations[index].externalUrl, "_blank", "noopener");
+  if (url) {
+    document.getElementById("mapWrap").innerHTML = `
+      <iframe src="${url}" allowfullscreen loading="lazy"></iframe>
+      <div class="map-locations">
+        ${mapLocations.map((location, index) => `
+          <button class="map-location ${index === selectedMapLocation ? "active" : ""}" onclick="focusMapLocation(${index})">${escapeHTML(location.label)}</button>
+        `).join("")}
+      </div>
+    `;
+  }
+}
+
+function focusMapLocation(index) {
+  if (!mapLocations[index]) return;
+  selectedMapLocation = index;
+  renderMap();
+  if (mapLocations[index].externalUrl) {
+    window.open(mapLocations[index].externalUrl, "_blank", "noopener");
   const query = h.place_id
     ? `place_id:${h.place_id}`
     : `${h.name} ${h.location || tour.destination}`;
@@ -836,6 +865,17 @@ function getAudienceReviews(reviews) {
   const matched = scored.filter(r => r._score > 0);
   const finalList = matched.length >= 2 ? matched : scored;
   return finalList.slice(0, 3).map(({ _score, ...rest }) => rest);
+}
+
+
+function withTimeout(promise, timeoutMs, message = "Zeitüberschreitung") {
+  let timer = null;
+  const timeoutPromise = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
 }
 
 function formatDateRange(from, to) {
