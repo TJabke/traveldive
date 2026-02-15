@@ -34,6 +34,9 @@
     <h1 id="heroTitle">Ihr Traumurlaub wartet</h1>
     <p id="heroSubtitle"></p>
     <div class="hero-meta" id="heroMeta"></div>
+    <div class="hero-countdown" id="heroCountdown" style="display:none;"></div>
+    <div class="hero-story" id="heroStory"></div>
+    <div class="hero-highlights" id="heroHighlights"></div>
     <div class="personalized-for" id="heroPref" style="display:none;">
       <div class="pf-label">Zugeschnitten auf:</div>
       <div class="pf-tags" id="heroPrefTags"></div>
@@ -42,6 +45,16 @@
   <div class="scroll-hint">
     <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4v12M5 11l5 5 5-5"/></svg>
     Tour starten
+  </div>
+</section>
+
+<!-- HOTEL SELECTOR -->
+<section class="hotel-selector" id="selector" data-track="Hotels vergleichen">
+  <div class="inner">
+    <div class="section-label" id="selectorLabel">Empfehlungen</div>
+    <div class="section-title" id="selectorTitle">Hotels, die zu Ihnen passen</div>
+    <p class="section-text" style="color:rgba(255,255,255,.6);">Klicken Sie auf ein Hotel, um es im Detail zu erkunden.</p>
+    <div class="hotel-cards-row" id="hotelCards"></div>
   </div>
 </section>
 
@@ -57,16 +70,6 @@
       ✅ <strong id="transferChoice"></strong> ausgewählt – wird bei der Buchung berücksichtigt.
     </div>
     <p class="transfer-note" id="transferNote"></p>
-  </div>
-</section>
-
-<!-- HOTEL SELECTOR -->
-<section class="hotel-selector" id="selector" data-track="Hotels vergleichen">
-  <div class="inner">
-    <div class="section-label" id="selectorLabel">Empfehlungen</div>
-    <div class="section-title" id="selectorTitle">Hotels, die zu Ihnen passen</div>
-    <p class="section-text" style="color:rgba(255,255,255,.6);">Klicken Sie auf ein Hotel, um es im Detail zu erkunden.</p>
-    <div class="hotel-cards-row" id="hotelCards"></div>
   </div>
 </section>
 
@@ -92,7 +95,9 @@
 <section class="weather-section" id="weather" data-track="Klima">
   <div class="section-label" id="weatherLabel">Klima</div>
   <div class="section-title" id="weatherTitle">Wetter vor Ort</div>
+  <div class="weather-mood" id="weatherMood"></div>
   <div class="weather-grid" id="weatherGrid"></div>
+  <div class="weather-activities" id="weatherActivities"></div>
   <p class="weather-sub" id="weatherSub"></p>
 </section>
 
@@ -142,7 +147,12 @@
   <p>Dieser Link ist leider nicht gültig oder die Tour wurde entfernt. Bitte kontaktieren Sie Ihr Reisebüro.</p>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<div class="photo-lightbox" id="photoLightbox" style="display:none;" onclick="closePhotoLightbox()">
+  <button class="photo-lightbox-close" type="button" aria-label="Schließen" onclick="closePhotoLightbox(event)">×</button>
+  <img id="photoLightboxImage" src="" alt="Hotelbild groß" />
+  <div class="photo-lightbox-caption" id="photoLightboxCaption"></div>
+</div>
+
 <script src="/js/api.js"></script>
 <script src="/js/tracking.js"></script>
 <script src="/js/tour.js"></script>
