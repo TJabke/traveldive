@@ -96,6 +96,16 @@
               <select class="form-select" id="fMealPlan"><option>All-Inclusive</option><option>Halbpension</option><option>Frühstück</option><option>Nur Übernachtung</option></select>
             </div>
           </div>
+          <div class="form-row three">
+            <div class="form-group"><label class="form-label">Reiseprofil</label>
+              <select class="form-select" id="fTravelerType">
+                <option value="family">Familie mit Kindern</option>
+                <option value="solo">Alleinreisend</option>
+                <option value="couple">Pärchen</option>
+              </select>
+              <div class="form-hint">Steuert Tonalität und passende Gästebewertungen.</div>
+            </div>
+          </div>
           <div class="form-group full">
             <label class="form-label">Kundenvorlieben</label>
             <div class="form-hint" style="margin-bottom:.3rem;">Beeinflussen KI-generierte Inhalte (Tagesplan, Empfehlungen)</div>
@@ -120,6 +130,29 @@
         </div>
         <div class="card-body" id="hotelList">
           <div class="info-note">💡 Fügen Sie Hotels hinzu und klicken Sie "KI generieren" um automatisch Beschreibungen, Restaurants, Pools und Zimmerinfos zu erstellen.</div>
+        </div>
+      </div>
+
+
+      <!-- ROOM CATEGORIES -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🛏</span> Zimmerkategorie für Kundenseite</div>
+          <button class="btn btn-sm btn-primary" onclick="addRoomOption()">+ Zimmerkategorie</button>
+        </div>
+        <div class="card-body">
+          <div class="form-row" style="margin-bottom:.7rem;align-items:flex-end;">
+            <div class="form-group" style="flex:1;">
+              <label class="form-label">Hotel-URL für Zimmerdaten (optional)</label>
+              <input class="form-input" id="roomSourceUrl" placeholder="https://hotel.example/rooms">
+              <div class="form-hint">Extrahiert Zimmertypen + Ausstattungsmerkmale (ohne Preise/Verfügbarkeit).</div>
+            </div>
+            <div class="form-group" style="margin-left:.5rem;">
+              <button class="btn btn-sm" onclick="extractRoomsForCurrentHotel()">🔎 Zimmer extrahieren</button>
+            </div>
+          </div>
+          <div id="roomCategoryInfo" class="form-hint" style="margin-bottom:.6rem;">Bitte zuerst ein Hotel auswählen.</div>
+          <div class="editable-list" id="roomCategoryList"></div>
         </div>
       </div>
 
@@ -202,7 +235,6 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/js/api.js"></script>
 <script src="/js/dashboard.js"></script>
 </body>
